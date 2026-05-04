@@ -11,8 +11,12 @@ A full-featured frontend prototype for a bake shop point-of-sale and management 
 3. [Getting Started](#getting-started)
 4. [Pages Overview](#pages-overview)
 5. [Component Guide](#component-guide)
-6. [Data & State](#data--state)
-7. [Connecting to a Backend](#connecting-to-a-backend)
+6. [API Services](#api-services)
+7. [Data & State](#data--state)
+8. [Connecting to a Backend](#connecting-to-a-backend)
+9. [Environment Configuration](#%EF%B8%8F-environment-configuration)
+10. [Deploying to Vercel](#-deploying-to-vercel)
+11. [Notes](#-notes)
 
 ---
 
@@ -23,8 +27,7 @@ A full-featured frontend prototype for a bake shop point-of-sale and management 
 | React 18 | UI framework |
 | Vite | Build tool & dev server |
 | Tailwind CSS v3 | Styling (utility-first) |
-| React Router v6 | Client-side routing |
-| Recharts | Analytics charts |
+| React Router v6 | Client-side routing || Axios 1.14 | HTTP client with centralized API instance || Recharts | Analytics charts |
 | Lucide React | Icons |
 
 **Fonts used:**
@@ -38,30 +41,50 @@ A full-featured frontend prototype for a bake shop point-of-sale and management 
 ```
 aileen-niculus-pos/
 ├── src/
+│   ├── services/                              ← API service layer
+│   │   ├── api.js                             ← Centralized Axios instance
+│   │   ├── authService.js                     ← Auth endpoints
+│   │   ├── orderService.js                    ← Order endpoints
+│   │   └── productService.js                  ← Product endpoints
 │   ├── data/
-│   │   └── dummyData.js          ← All dummy/seed data (replace with API calls)
+│   │   └── dummyData.js                       ← All dummy/seed data (replace with API calls)
 │   ├── context/
-│   │   └── AppContext.jsx         ← Global state (React Context + useState)
+│   │   └── AppContext.jsx                     ← Global state (React Context + useState)
 │   ├── components/
 │   │   ├── layout/
-│   │   │   └── AppLayout.jsx      ← Sidebar, TopBar, page wrapper
+│   │   │   └── AppLayout.jsx                  ← Sidebar, TopBar, page wrapper
 │   │   └── ui/
-│   │       └── index.jsx          ← All reusable UI components
+│   │       └── index.jsx                      ← All reusable UI components
 │   ├── pages/
-│   │   ├── AnalyticsPage.jsx
-│   │   ├── POSPage.jsx
-│   │   ├── AllOrdersPage.jsx
-│   │   ├── ProductManagementPage.jsx
-│   │   ├── InventoryPage.jsx
-│   │   └── SettingsPage.jsx
-│   ├── App.jsx                    ← Router + page map
-│   ├── main.jsx                   ← React entry point
-│   └── index.css                  ← Tailwind base + custom animations
+│   │   ├── customer/                          ← Customer-facing pages
+│   │   │   ├── CustomerHome.jsx
+│   │   │   ├── CustomerMenu.jsx
+│   │   │   ├── CustomerCheckout.jsx
+│   │   │   └── ...
+│   │   ├── inventory/                         ← Inventory management
+│   │   │   ├── RawTab.jsx
+│   │   │   ├── RecipeTab.jsx
+│   │   │   └── WasteTab.jsx
+│   │   ├── AnalyticsPage.jsx                  ← Dashboard & KPIs
+│   │   ├── POSPage.jsx                        ← Point of Sale
+│   │   ├── AllOrdersPage.jsx                  ← Order Management
+│   │   ├── ProductManagementPage.jsx          ← Product CRUD
+│   │   ├── InventoryPage.jsx                  ← Inventory tracking
+│   │   └── LoginPage.jsx                      ← Authentication
+│   ├── assets/
+│   │   └── images/                            ← Product & homepage images
+│   ├── utils/
+│   │   └── inventoryHelpers.js                ← Utility functions
+│   ├── App.jsx                                ← Router + page map
+│   ├── main.jsx                               ← React entry point
+│   └── index.css                              ← Tailwind base + custom animations
 ├── index.html
 ├── package.json
 ├── vite.config.js
 ├── tailwind.config.js
 ├── postcss.config.js
+├── .env                                       ← Development environment
+├── .env.production                            ← Production environment
 └── README.md
 ```
 
@@ -188,7 +211,96 @@ All reusable components are exported from `src/components/ui/index.jsx`:
 
 ---
 
-## 📦 Data & State
+## � API Services
+
+The project includes a **production-ready API service layer** with a centralized Axios instance and typed service methods.
+
+### Architecture: `src/services/`
+
+```
+src/services/
+├── api.js                    ← Centralized Axios instance (baseURL from env)
+├── authService.js            ← Authentication endpoints
+├── orderService.js           ← Order CRUD endpoints
+└── productService.js         ← Product CRUD endpoints
+```
+
+### `src/services/api.js` — Centralized Axios Instance
+
+**Features:**
+- ✅ `baseURL` from `import.meta.env.VITE_API_URL` (environment-based routing)
+- ✅ **Request Interceptor** — Automatically adds `Authorization: Bearer {token}` from localStorage
+- ✅ **Response Interceptor** — Handles errors (401, 403, 404, 5xx) with logging
+- ✅ 10-second timeout
+- ✅ JSON content-type headers
+
+```js
+import api from './api';
+
+// All requests automatically include auth token and error handling
+const response = await api.get('/products');
+```
+
+### Service Examples
+
+#### `src/services/authService.js`
+```js
+import api from './api';
+
+export const authService = {
+  login:         (data)    => api.post('/auth/login', data),
+  logout:        ()        => api.post('/auth/logout'),
+  sendResetCode: (email)   => api.post('/auth/forgot-password', { email }),
+  verifyOtp:     (data)    => api.post('/auth/verify-otp', data),
+  resetPassword: (data)    => api.post('/auth/reset-password', data),
+  me:            ()        => api.get('/auth/me'),
+};
+```
+
+#### `src/services/orderService.js`
+```js
+import api from './api';
+
+export const orderService = {
+  getAll:       (params)     => api.get('/orders', { params }),
+  create:       (data)       => api.post('/orders', data),
+  updateStatus: (id, status) => api.patch(`/orders/${id}/status`, { status }),
+};
+```
+
+#### `src/services/productService.js`
+```js
+import api from './api';
+
+export const productService = {
+  getAll:  ()           => api.get('/products'),
+  getById: (id)         => api.get(`/products/${id}`),
+  create:  (data)       => api.post('/products', data),
+  update:  (id, data)   => api.put(`/products/${id}`, data),
+  delete:  (id)         => api.delete(`/products/${id}`),
+};
+```
+
+### Using Services in Components
+
+```js
+import { productService } from '../services/productService';
+
+// In your component
+const fetchProducts = async () => {
+  try {
+    const response = await productService.getAll();
+    setProducts(response.data);
+  } catch (error) {
+    console.error('Failed to fetch products:', error);
+    showToast('Error loading products', 'error');
+  }
+};
+```
+
+---
+
+## �📦 Data & State
 
 ### `src/data/dummyData.js`
 Exports all seed/dummy data:
@@ -201,27 +313,52 @@ Exports all seed/dummy data:
 - `ANALYTICS` — kpi, trend, topProducts data by view (day/week/month/year)
 
 ### `src/context/AppContext.jsx`
-Global state via React Context. Wraps the entire app.
 
-All CRUD operations are here. When connecting to a backend, **replace the `useState` initializers and mutation functions with API calls** (e.g., `fetch`, `axios`, `react-query`).
+**Global state via React Context** that wraps the entire app and manages all CRUD operations.
 
+**Current State:**
+- Currently uses local `useState` with dummy data initialization
+- Ready for backend integration — all functions are structured to accept async API calls
+
+**What to do:**
+1. Import the services: `import { productService, orderService, authService } from '../services/...'`
+2. Replace mutations to call services instead of updating local state
+3. Add loading/error states for async operations
+
+**Example:**
 ```js
-// Example: replace addProduct
+import { productService } from '../services/productService';
+
+// Replace this:
+const addProduct = useCallback((product) => {
+  setProducts(prev => [...prev, { ...product, id: `p${Date.now()}` }]);
+}, []);
+
+// With this:
 const addProduct = useCallback(async (product) => {
-  const res = await api.post('/products', product);
-  setProducts(prev => [...prev, res.data]);
+  try {
+    const res = await productService.create(product);
+    setProducts(prev => [...prev, res.data]);
+  } catch (error) {
+    console.error('Failed to create product:', error);
+    // Show error toast to user
+  }
 }, []);
 ```
+
+**Available Actions in AppContext:**
+- Products: `addProduct`, `updateProduct`, `deleteProduct`
+- Orders: `addOrder`, `updateOrderStatus`
+- Ingredients: `addIngredient`, `updateIngredient`, `deleteIngredient`
+- Recipes: `addRecipe`, `updateRecipe`, `deleteRecipe`
+- Production: `confirmBatch`
+- Waste: `addWaste`
 
 ---
 
 ## 🔌 Connecting to a Backend
 
-### ✅ Production-Ready API Setup
-
-The project includes a **centralized Axios instance** at `src/services/api.js` that's fully configured for production deployment:
-
-#### Environment Variables
+### Environment Variables
 
 **Development** (`.env`):
 ```
@@ -236,85 +373,78 @@ VITE_API_URL=https://your-production-api-url.com/api
 VITE_APP_ENV=production
 ```
 
-#### Using the Centralized API
+Vite automatically selects the correct `.env` file based on build context (development vs. production).
 
-All services import and use the centralized Axios instance with proper error handling:
+### Integration Checklist
 
-```js
-// src/services/authService.js
-import api from './api';
+1. **Update Production API URL** in `.env.production` to your actual backend URL
+2. **Create Additional Services** if needed:
+   - `src/services/inventoryService.js` — Ingredients, recipes, waste logs
+   - `src/services/analyticsService.js` — KPI data, trends
+   - Extend existing services with more endpoints
+3. **Replace Dummy Data in AppContext.jsx** — Wire up mutations to use services:
+   ```js
+   // Example mutation replacement
+   const addProduct = useCallback(async (product) => {
+     try {
+       const res = await productService.create(product);
+       setProducts(prev => [...prev, res.data]);
+     } catch (error) {
+       console.error('Failed to create product:', error);
+     }
+   }, []);
+   ```
+4. **Add Error Handling** — Leverage the response interceptor in `api.js`
+5. **Implement Authentication** — Store token in localStorage after login:
+   ```js
+   const handleLogin = async (credentials) => {
+     const res = await authService.login(credentials);
+     localStorage.setItem('authToken', res.data.token);
+   };
+   ```
+6. **Add Protected Routes** in `App.jsx` to redirect unauthenticated users to LoginPage
 
-export const authService = {
-  login: (data) => api.post('/auth/login', data),
-  logout: () => api.post('/auth/logout'),
-  me: () => api.get('/auth/me'),
-};
-```
+### Backend API Endpoints
 
-The `api` instance includes:
-- ✅ Automatic auth token injection (from localStorage)
-- ✅ Request timeout (10 seconds)
-- ✅ Error response interception (401, 403, 404, 5xx)
-- ✅ Proper `Content-Type` headers
-
-### Integration Steps
-
-1. **Update API URL**: Set `VITE_API_URL` to your backend URL in `.env.production`
-2. **Replace dummy data** in `src/data/dummyData.js` with API calls or remove it.
-3. **Replace mutations** in `src/context/AppContext.jsx` with API calls using the services.
-4. **Add loading states** — components are already structured for `isLoading` props.
-5. **Authentication** — the sidebar Logout button is ready. Add protected route wrapper in `App.jsx`.
-6. **Image uploads** — Product modal upload button ready. Wire to storage (Cloudinary, S3, etc).
-
-### Example: Connecting a Mutation
-
-```js
-// Before (in AppContext.jsx)
-const addProduct = useCallback((product) => {
-  const id = `p${Date.now()}`;
-  setProducts(prev => [...prev, { ...product, id }]);
-}, []);
-
-// After
-import { productService } from '../services/productService';
-
-const addProduct = useCallback(async (product) => {
-  try {
-    const res = await productService.create(product);
-    setProducts(prev => [...prev, res.data]);
-  } catch (error) {
-    console.error('Failed to create product:', error);
-  }
-}, []);
-```
-
-### Suggested Backend Endpoints
+Reference structure for your backend implementation:
 
 ```
-GET    /api/products
-POST   /api/products
-PUT    /api/products/:id
-DELETE /api/products/:id
+AUTH ENDPOINTS
+POST   /api/auth/login                 ← { email, password }
+POST   /api/auth/logout
+POST   /api/auth/forgot-password       ← { email }
+POST   /api/auth/verify-otp            ← { code }
+POST   /api/auth/reset-password        ← { token, newPassword }
+GET    /api/auth/me                    ← Returns current user
 
-GET    /api/orders
-POST   /api/orders
-PATCH  /api/orders/:id/status
+PRODUCTS
+GET    /api/products                   ← Returns array of products
+POST   /api/products                   ← Create product
+GET    /api/products/:id               ← Get single product
+PUT    /api/products/:id               ← Update product
+DELETE /api/products/:id               ← Delete product
 
-GET    /api/ingredients
-POST   /api/ingredients
-PUT    /api/ingredients/:id
+ORDERS
+GET    /api/orders                     ← List with query params (status, date, etc)
+POST   /api/orders                     ← Create order
+PATCH  /api/orders/:id/status          ← { status: 'Ready' | 'Completed' | 'Cancelled' }
+
+INVENTORY (OPTIONAL - extend with inventoryService.js)
+GET    /api/ingredients                ← List all ingredients
+POST   /api/ingredients                ← Add ingredient
+PUT    /api/ingredients/:id            ← Update stock + ledger
 DELETE /api/ingredients/:id
 
-GET    /api/recipes
-POST   /api/recipes
-PUT    /api/recipes/:id
+GET    /api/recipes                    ← List all recipes
+POST   /api/recipes                    ← Create recipe
+PUT    /api/recipes/:id                ← Update recipe
 DELETE /api/recipes/:id
 
-POST   /api/production-logs
-GET    /api/production-logs
+GET    /api/production-logs            ← Batch production history
+POST   /api/production-logs            ← Log new batch
 
-POST   /api/waste-logs
-GET    /api/waste-logs
+GET    /api/waste-logs                 ← Waste entries
+POST   /api/waste-logs                 ← Log waste
 ```
 
 ---
@@ -393,10 +523,70 @@ npm run preview  # Serves dist/ on http://localhost:5173
 Vite automatically selects the correct `.env` file based on build context.
 
 ---
+## ⚙️ Environment Configuration
 
+### Development
+```bash
+npm run dev
+# Loads: .env
+# API Base: http://localhost:3000/api
+# Access: http://localhost:5173
+```
+
+### Production Build
+```bash
+npm run build
+# Loads: .env.production
+# API Base: https://your-production-api-url.com/api
+# Output: dist/ (ready for deployment)
+```
+
+### Preview Production Build
+```bash
+npm run build
+npm run preview
+# Simulates production build locally
+# Loads: .env.production
+# Access: http://localhost:5173
+```
+
+### Vercel Deployment Environment Variables
+Set in Vercel Dashboard → Settings → Environment Variables:
+
+| Variable | Value | Environment |
+|----------|-------|-------------|
+| `VITE_API_URL` | `https://your-api.com/api` | Production |
+| `VITE_APP_ENV` | `production` | Production |
+
+---
 ## �📝 Notes
 
-- **No authentication** is included in this prototype. Add a login page + route guard when building for production.
-- **Stock numbers** shown as "10 LEFT" on POS cards are hardcoded in `dummyData.js`. Wire to real inventory when connecting backend.
-- **Images** use Unsplash URLs. Replace with your own product photos locally or via an image hosting service.
-- This frontend is **panel/presentation ready** — all pages are functional, connected, and consistent.
+### Project Status
+- ✅ Full frontend UI prototype with all pages implemented
+- ✅ Reusable component library (20+ components)
+- ✅ Production-ready API service layer with centralized Axios
+- ✅ Environment-based configuration (dev/prod)
+- ✅ Error handling and request interceptors
+- ⏳ Backend integration ready (just wire services to AppContext)
+- ⏳ Authentication (login UI ready, wire authService)
+- ⏳ Image upload (UI ready, needs storage backend)
+
+### Integration Roadmap
+1. **Phase 1**: Connect `authService` → Login/Logout
+2. **Phase 2**: Connect `productService` → Products CRUD
+3. **Phase 3**: Connect `orderService` → Orders CRUD
+4. **Phase 4**: Create `inventoryService` → Ingredients, Recipes, Waste
+5. **Phase 5**: Implement authentication guards + protected routes
+6. **Phase 6**: Wire image uploads to storage (S3, Cloudinary, etc)
+
+### Deployment Notes
+- **Vercel**: Auto-detects Vite, uses `npm run build`, serves `dist/`
+- **Environment**: `.env` for dev, `.env.production` for prod
+- **API URL**: Update `VITE_API_URL` in `.env.production` before deploying
+- **No hardcoded URLs**: All API calls use environment variables ✅
+
+### Data Notes
+- **Dummy data** in `src/data/dummyData.js` — initialize real data from backend
+- **Images** use Unsplash URLs — replace with your product photos
+- **Stock levels** currently hardcoded — fetch from inventory service
+- **All data flows** through AppContext — single source of truth
