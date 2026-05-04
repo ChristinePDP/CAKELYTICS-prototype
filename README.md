@@ -217,11 +217,76 @@ const addProduct = useCallback(async (product) => {
 
 ## 🔌 Connecting to a Backend
 
-1. **Replace dummy data** in `src/data/dummyData.js` with your initial state or remove it.
-2. **Replace mutations** in `src/context/AppContext.jsx` with API calls.
-3. **Add loading states** — the components are already structured to easily add `isLoading` props to tables and cards.
-4. **Authentication** — the sidebar has a Logout button ready to wire up. Add a protected route wrapper in `App.jsx`.
-5. **Image uploads** — the Product modal has an upload button ready. Wire to your storage (e.g., Cloudinary, S3, Firebase Storage).
+### ✅ Production-Ready API Setup
+
+The project includes a **centralized Axios instance** at `src/services/api.js` that's fully configured for production deployment:
+
+#### Environment Variables
+
+**Development** (`.env`):
+```
+VITE_API_URL=http://localhost:3000/api
+VITE_APP_NAME=Aileen & Niculus
+VITE_APP_ENV=development
+```
+
+**Production** (`.env.production`):
+```
+VITE_API_URL=https://your-production-api-url.com/api
+VITE_APP_ENV=production
+```
+
+#### Using the Centralized API
+
+All services import and use the centralized Axios instance with proper error handling:
+
+```js
+// src/services/authService.js
+import api from './api';
+
+export const authService = {
+  login: (data) => api.post('/auth/login', data),
+  logout: () => api.post('/auth/logout'),
+  me: () => api.get('/auth/me'),
+};
+```
+
+The `api` instance includes:
+- ✅ Automatic auth token injection (from localStorage)
+- ✅ Request timeout (10 seconds)
+- ✅ Error response interception (401, 403, 404, 5xx)
+- ✅ Proper `Content-Type` headers
+
+### Integration Steps
+
+1. **Update API URL**: Set `VITE_API_URL` to your backend URL in `.env.production`
+2. **Replace dummy data** in `src/data/dummyData.js` with API calls or remove it.
+3. **Replace mutations** in `src/context/AppContext.jsx` with API calls using the services.
+4. **Add loading states** — components are already structured for `isLoading` props.
+5. **Authentication** — the sidebar Logout button is ready. Add protected route wrapper in `App.jsx`.
+6. **Image uploads** — Product modal upload button ready. Wire to storage (Cloudinary, S3, etc).
+
+### Example: Connecting a Mutation
+
+```js
+// Before (in AppContext.jsx)
+const addProduct = useCallback((product) => {
+  const id = `p${Date.now()}`;
+  setProducts(prev => [...prev, { ...product, id }]);
+}, []);
+
+// After
+import { productService } from '../services/productService';
+
+const addProduct = useCallback(async (product) => {
+  try {
+    const res = await productService.create(product);
+    setProducts(prev => [...prev, res.data]);
+  } catch (error) {
+    console.error('Failed to create product:', error);
+  }
+}, []);
+```
 
 ### Suggested Backend Endpoints
 
@@ -277,7 +342,59 @@ Change these values to update the entire color scheme throughout the app.
 
 ---
 
-## 📝 Notes
+## � Deploying to Vercel
+
+This frontend is fully configured for production deployment to Vercel with environment-based API routing.
+
+### Prerequisites
+
+- GitHub repository linked
+- Backend API URL ready (development & production)
+
+### Deployment Steps
+
+1. **Push to GitHub**:
+   ```bash
+   git add .
+   git commit -m "Production-ready for Vercel deployment"
+   git push origin main
+   ```
+
+2. **Connect to Vercel**:
+   - Go to [vercel.com](https://vercel.com) and import your GitHub repository
+   - Select the project and configure settings
+
+3. **Set Environment Variables** (Vercel Dashboard → Settings → Environment Variables):
+   - **Name**: `VITE_API_URL`
+   - **Value**: `https://your-production-api-url.com/api`
+   - **Environments**: Production
+
+4. **Deploy**:
+   - Vercel auto-detects Vite and uses:
+     - Build command: `npm run build`
+     - Output directory: `dist`
+   - Deploy by pushing to main or manually trigger in dashboard
+
+### Local Production Preview
+
+Test the production build locally:
+
+```bash
+npm run build    # Creates optimized dist/ folder
+npm run preview  # Serves dist/ on http://localhost:5173
+```
+
+### Environment Isolation
+
+- **Development**: Uses `.env` → `http://localhost:3000/api`
+- **Production**: Uses `.env.production` → Your production API URL
+- **Vercel**: Override via dashboard environment variables
+
+Vite automatically selects the correct `.env` file based on build context.
+
+---
+
+## �📝 Notes
 
 - **No authentication** is included in this prototype. Add a login page + route guard when building for production.
 - **Stock numbers** shown as "10 LEFT" on POS cards are hardcoded in `dummyData.js`. Wire to real inventory when connecting backend.
