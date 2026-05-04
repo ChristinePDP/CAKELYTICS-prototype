@@ -11,20 +11,9 @@ function fmt(n) {
   return '₱' + Number(n).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-const PLACEHOLDER = {
-  Package: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&q=80',
-  Pastry:  'https://images.unsplash.com/photo-1486427944299-d1955d23e34d?w=400&q=80',
-};
-
-const PRODUCT_IMAGES = {
-  'Package A':  'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&q=80',
-  'Package B':  'https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=600&q=80',
-  'Package C':  'https://images.unsplash.com/photo-1558636508-e0db3814bd1d?w=600&q=80',
-  'Package D':  'https://images.unsplash.com/photo-1621303837174-89787a7d4729?w=600&q=80',
-  'Package E':  'https://images.unsplash.com/photo-1586788680434-30d324b2d46f?w=600&q=80',
-  'Package AB': 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=600&q=80',
-  'Package EA': 'https://images.unsplash.com/photo-1519869325930-281384150729?w=600&q=80',
-};
+// ─── BINAGO: Tinanggal na ang hardcoded PRODUCT_IMAGES at PLACEHOLDER ───
+// Gagamit tayo ng iisang default fallback na sumusunod sa design mo.
+const DEFAULT_PLACEHOLDER = 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&q=80';
 
 // Packages na may Themed Cake
 const CAKE_PACKAGES = ['p1', 'p2', 'p3', 'p4', 'p5'];
@@ -46,8 +35,11 @@ function InclusionList({ text }) {
 
 function ProductCard({ product, onClick }) {
   const isPackage  = product.category === 'Package';
-  const imgSrc     = PRODUCT_IMAGES[product.name] || product.image || PLACEHOLDER[product.category] || PLACEHOLDER.Pastry;
+  
+  // ─── BINAGO: Direkta nang binabasa ang product.image ───
+  const imgSrc     = product.image || DEFAULT_PLACEHOLDER;
   const outOfStock = product.stock === 0;
+
   return (
     <div
       onClick={() => !outOfStock && onClick(product)}
@@ -55,8 +47,15 @@ function ProductCard({ product, onClick }) {
         ${outOfStock ? 'border-brand-100 opacity-60 cursor-not-allowed' : 'border-brand-200 cursor-pointer hover:border-brand-400 hover:shadow-md active:scale-[0.98]'}`}
     >
       <div className="relative">
-        <img src={imgSrc} alt={product.name} className={`w-full object-cover ${isPackage ? 'h-24' : 'h-20'}`}
-          onError={e => { e.target.src = PLACEHOLDER[product.category] || PLACEHOLDER.Pastry; }} />
+        {/* ── BINAGO: Ginawang mas uniform ang container ng image (katulad ng menu) ── */}
+        <div className={`relative w-full overflow-hidden bg-brand-50 ${isPackage ? 'aspect-[4/3]' : 'aspect-video'}`}>
+           <img 
+             src={imgSrc} 
+             alt={product.name} 
+             className="absolute top-0 left-0 w-full h-full object-cover"
+             onError={e => { e.target.src = DEFAULT_PLACEHOLDER; }} 
+           />
+        </div>
         {!outOfStock && (
           <span className={`absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full
             ${product.stock <= 5 ? 'bg-amber-600/90 text-white' : 'bg-black/40 text-white'}`}>

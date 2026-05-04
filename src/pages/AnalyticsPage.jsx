@@ -229,7 +229,7 @@ export default function AnalyticsPage() {
     setAiError(null);
 
     try {
-      const API_KEY = "AIzaSyCpwRtAaZpxXi8c6vYty7f_JcSsMc3Vzgk"; 
+      const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
       
       const growthItems = ANALYTICS.predictive.growthLeaders[vk].map(item => `${item.name} (+${item.pct}%)`).join(', ');
       const riskItems = ANALYTICS.predictive.atRisk[vk].map(item => `${item.name} (${item.pct}%)`).join(', ');
