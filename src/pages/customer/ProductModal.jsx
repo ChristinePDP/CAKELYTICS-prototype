@@ -67,7 +67,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                 ))}
               </ul>
             )}
-            <div className="text-[24px] font-black text-white">₱{(product.price * qty).toLocaleString()}</div>
+            <div className="text-[24px] font-black text-white">₱{(product.price).toLocaleString()}</div>
           </div>
         </div>
 

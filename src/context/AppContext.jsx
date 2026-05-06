@@ -21,6 +21,18 @@ const nowStr = () => new Date().toLocaleString('en-US', {
   month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit',
 });
 
+// Initial dummy data para sa Celebration Materials
+const INIT_MATERIALS = [
+  { id: 'm1', name: 'Foil Balloon (Numbers 0-9)', unit: 'pcs', stock: 50, min: 10, costPerUnit: 25 },
+  { id: 'm2', name: 'Foil Balloon (Letters A-Z)', unit: 'pcs', stock: 120, min: 20, costPerUnit: 25 },
+  { id: 'm3', name: 'Latex Metallic Balloons (Pack of 50)', unit: 'packs', stock: 15, min: 5, costPerUnit: 120 },
+  { id: 'm4', name: 'Pastel Balloons (Pack of 100)', unit: 'packs', stock: 8, min: 3, costPerUnit: 180 },
+  { id: 'm5', name: 'Tarpaulin (2x3 ft - Generic Layout)', unit: 'pcs', stock: 12, min: 5, costPerUnit: 150 },
+  { id: 'm6', name: 'Tarpaulin (3x4 ft - Customized)', unit: 'pcs', stock: 5, min: 2, costPerUnit: 300 },
+  { id: 'm7', name: 'Number Candle (Assorted)', unit: 'pcs', stock: 80, min: 20, costPerUnit: 15 },
+  { id: 'm8', name: 'Sparkler Candles', unit: 'packs', stock: 25, min: 10, costPerUnit: 45 },
+];
+
 export function AppProvider({ children }) {
 
   // ── State ──────────────────────────────────────────────────────
@@ -28,6 +40,10 @@ export function AppProvider({ children }) {
   const [orders,      setOrders]      = useState(INIT_ORDERS);
   const [wasteLogs,   setWasteLogs]   = useState(INIT_WASTE_LOGS);
   const [recipes,     setRecipes]     = useState(INIT_RECIPES);
+  
+  // BAGONG STATE: Para sa Celebration Materials
+  const [materials,   setMaterials]   = useState(INIT_MATERIALS);
+  
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState(null);
 
@@ -100,6 +116,28 @@ export function AppProvider({ children }) {
     setIngredients(prev => prev.filter(i => i.id !== id));
   }, []);
 
+  // ── Celebration Materials ──────────────────────────────────────
+  
+  // TODO (backend): await materialService.create(mat)
+  const addMaterial = useCallback((mat) => {
+    const id = `m${Date.now()}`;
+    setMaterials(prev => [...prev, { ...mat, id }]);
+  }, []);
+
+  // TODO (backend): await materialService.update(id, updates)
+  const updateMaterial = useCallback((id, updates, addedQty = 0, note = '') => {
+    setMaterials(prev => prev.map(m => {
+      if (m.id !== id) return m;
+      return { ...m, ...updates };
+    }));
+  }, []);
+
+  // TODO (backend): await materialService.remove(id)
+  const deleteMaterial = useCallback((id) => {
+    setMaterials(prev => prev.filter(m => m.id !== id));
+  }, []);
+
+
   // ── Recipes ────────────────────────────────────────────────────
   // TODO (backend): await recipeService.create(recipe)
   const addRecipe = useCallback((recipe) => {
@@ -154,8 +192,11 @@ export function AppProvider({ children }) {
 
   // ── Waste Logs ─────────────────────────────────────────────────
   // TODO (backend): await wasteService.log(wasteData)
+// ── Waste Logs ─────────────────────────────────────────────────
   const logWaste = useCallback((wasteData) => {
     const dt = nowStr();
+    
+    // Kung ang na-waste ay ingredient, ibabawas sa ingredients list
     if (wasteData.type === 'ingredient') {
       setIngredients(prev => prev.map(i => {
         if (i.name !== wasteData.item) return i;
@@ -170,12 +211,22 @@ export function AppProvider({ children }) {
         return { ...i, stock: newStock, stockLog: [logEntry, ...(i.stockLog || [])] };
       }));
     }
+    
+    // BAGONG LOGIC: Kung ang na-waste ay Celebration Material, ibabawas sa materials list
+    else if (wasteData.type === 'material') {
+      setMaterials(prev => prev.map(m => {
+        if (m.name !== wasteData.item) return m;
+        const newStock = +(Math.max(0, m.stock - wasteData.rawQty)).toFixed(4);
+        return { ...m, stock: newStock };
+      }));
+    }
+
     setWasteLogs(prev => [{ ...wasteData, id: `w${Date.now()}`, dt }, ...prev]);
   }, []);
 
   const value = {
     // ── Data
-    products, orders, ingredients, recipes, wasteLogs,
+    products, orders, ingredients, materials, recipes, wasteLogs,
     // ── Status
     loading, error,
     // ── Product actions
@@ -184,6 +235,8 @@ export function AppProvider({ children }) {
     addOrder, updateOrderStatus,
     // ── Ingredient actions
     addIngredient, updateIngredient, deleteIngredient,
+    // ── Material actions
+    addMaterial, updateMaterial, deleteMaterial,
     // ── Recipe actions
     addRecipe, updateRecipe, deleteRecipe,
     // ── Batch production

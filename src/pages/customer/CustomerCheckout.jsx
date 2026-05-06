@@ -13,8 +13,9 @@ export default function CustomerCheckout({ cart, setCart, setConfirmedOrderId })
   const [pickupType, setPickupType] = useState(hasPackage ? 'later' : 'now');
   const [payType, setPayType]       = useState('half');
 
+  // Tinanggal na ang fb sa state
   const [form, setForm] = useState({
-    name: '', phone: '', altPhone: '', fb: '', date: '', time: '10:00',
+    name: '', phone: '', altPhone: '', date: '', time: '10:00',
   });
 
   const getMinPreOrderDate = () => {
@@ -33,8 +34,9 @@ export default function CustomerCheckout({ cart, setCart, setConfirmedOrderId })
   const set = (field, val) => setForm(prev => ({ ...prev, [field]: val }));
 
   const handlePlaceOrder = () => {
-    if (!form.name || !form.phone || !form.fb) {
-      alert('Please enter your Full Name, Contact Number, and Facebook/Messenger Full Name.');
+    // Tinanggal na ang validation para sa fb
+    if (!form.name || !form.phone) {
+      alert('Please enter your Full Name and Contact Number.');
       return;
     }
     if (pickupType === 'later') {
@@ -67,10 +69,10 @@ export default function CustomerCheckout({ cart, setCart, setConfirmedOrderId })
           <div className="flex bg-[#F5EFEB] p-1 rounded-lg mb-4 border border-[#D6C5BE] gap-1">
             <button
               onClick={() => !hasPackage && setPickupType('now')}
-              title={hasPackage ? 'Hindi available ang Order Now para sa mga Package item.' : ''}
+              title={hasPackage ? 'Hindi available ang Pick up Now para sa mga Package item.' : ''}
               className={`flex-1 py-2 text-[13px] font-bold rounded-md transition-all border-none ${hasPackage ? 'opacity-40 cursor-not-allowed text-[#796860]' : 'cursor-pointer'} ${pickupType === 'now' ? 'bg-[#5A453C] text-white shadow-sm' : 'bg-transparent text-[#796860] hover:bg-[#EAE4E0]/50'}`}
             >
-              Order Now
+              Pick up Now
             </button>
             <button
               onClick={() => setPickupType('later')}
@@ -80,7 +82,7 @@ export default function CustomerCheckout({ cart, setCart, setConfirmedOrderId })
             </button>
           </div>
 
-          {/* Warning — show always if has package so customer knows why Order Now is locked */}
+          {/* Warning — show always if has package so customer knows why Pick up Now is locked */}
           {hasPackage && (
             <div className="bg-[#FFF8E7] border border-[#F3D79A] text-[#8C6B22] px-3 py-2.5 rounded-lg mb-4 text-[12px] font-semibold flex items-center gap-2">
               ⚠️ Ang iyong order ay may kasamang Package — kailangan ng Pre-Order (2 days preparation).
@@ -111,13 +113,9 @@ export default function CustomerCheckout({ cart, setCart, setConfirmedOrderId })
               <label className={labelCls}>Contact Number <span className="text-red-500">*</span></label>
               <input type="tel" className={inputCls} placeholder="09xxxxxxxxx" value={form.phone} onChange={e => set('phone', e.target.value)} />
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
               <label className={labelCls}>Alternative Number</label>
               <input type="tel" className={inputCls} placeholder="Optional" value={form.altPhone} onChange={e => set('altPhone', e.target.value)} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className={labelCls}>Facebook / Messenger Name <span className="text-red-500">*</span></label>
-              <input type="text" className={inputCls} placeholder="Para mabilis ka naming ma-contact" value={form.fb} onChange={e => set('fb', e.target.value)} />
             </div>
           </div>
 

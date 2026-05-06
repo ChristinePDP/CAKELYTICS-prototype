@@ -305,6 +305,10 @@ export const INGREDIENTS = [
   { id: 'i12', name: 'Salt',               stock: 0.8,  unit: 'kg',  min: 0.5,  costPerUnit: 30   },
   { id: 'i13', name: 'Brown Sugar',        stock: 3,    unit: 'kg',  min: 2,    costPerUnit: 65   },
   { id: 'i14', name: 'Strawberry Jam',     stock: 400,  unit: 'g',   min: 800,  costPerUnit: 0.8  },
+  { id: 'i15', name: 'Latex Balloons (Pack of 50)',    unit: 'packs', stock: 15,  min: 5, costPerUnit: 120 },
+  { id: 'i16', name: 'Foil Balloon (Numbers/Letters)',  unit: 'pcs',   stock: 80,  min: 20, costPerUnit: 25 },
+  { id: 'i17', name: 'Tarpaulin (2x3 ft)',              unit: 'pcs',   stock: 12,  min: 5, costPerUnit: 150 },
+  { id: 'i18', name: 'Tarpaulin (3x4 ft - Customized)', unit: 'pcs',   stock: 5,   min: 2, costPerUnit: 300 },
 ];
 
 export const RECIPES = [
@@ -315,7 +319,7 @@ export const RECIPES = [
       { name: 'Cake Flour', qty: 0.5, unit: 'kg' }, { name: 'White Sugar', qty: 0.4, unit: 'kg' },
       { name: 'Butter (Unsalted)', qty: 0.3, unit: 'kg' }, { name: 'Eggs', qty: 8, unit: 'pcs' },
       { name: 'Baking Powder', qty: 0.015, unit: 'kg' }, { name: 'Vanilla Extract', qty: 0.01, unit: 'L' },
-      { name: 'Fresh Milk', qty: 0.2, unit: 'L' },
+      { name: 'Fresh Milk', qty: 0.2, unit: 'L' }, { name: 'Latex Balloons (Pack of 50)', qty: 0.1, unit: 'packs' },
     ],
   },
   {
@@ -334,6 +338,7 @@ export const RECIPES = [
       { name: 'Butter (Unsalted)', qty: 0.4, unit: 'kg' }, { name: 'Eggs', qty: 11, unit: 'pcs' },
       { name: 'Baking Powder', qty: 0.02, unit: 'kg' }, { name: 'Vanilla Extract', qty: 0.015, unit: 'L' },
       { name: 'Fresh Milk', qty: 0.3, unit: 'L' }, { name: 'All-Purpose Flour', qty: 0.12, unit: 'kg' },
+      { name: 'Latex Balloons (Pack of 50)', qty: 0.1, unit: 'packs' },
     ],
   },
   {
@@ -342,7 +347,8 @@ export const RECIPES = [
       { name: 'Cake Flour', qty: 0.5, unit: 'kg' }, { name: 'White Sugar', qty: 0.4, unit: 'kg' },
       { name: 'Butter (Unsalted)', qty: 0.3, unit: 'kg' }, { name: 'Eggs', qty: 8, unit: 'pcs' },
       { name: 'Baking Powder', qty: 0.015, unit: 'kg' }, { name: 'Vanilla Extract', qty: 0.01, unit: 'L' },
-      { name: 'Fresh Milk', qty: 0.2, unit: 'L' },
+      { name: 'Fresh Milk', qty: 0.2, unit: 'L' }, { name: 'Latex Balloons (Pack of 50)', qty: 0.1, unit: 'packs' },
+      { name: 'Tarpaulin (3x4 ft - Customized)', qty: 1, unit: 'pcs' },
     ],
   },
   {
@@ -361,6 +367,7 @@ export const RECIPES = [
       { name: 'Butter (Unsalted)', qty: 0.5, unit: 'kg' }, { name: 'Eggs', qty: 14, unit: 'pcs' },
       { name: 'Baking Powder', qty: 0.025, unit: 'kg' }, { name: 'Vanilla Extract', qty: 0.015, unit: 'L' },
       { name: 'Fresh Milk', qty: 0.4, unit: 'L' }, { name: 'All-Purpose Flour', qty: 0.24, unit: 'kg' },
+      { name: 'Latex Balloons (Pack of 50)', qty: 0.2, unit: 'packs' },
     ],
   },
   {
@@ -576,9 +583,13 @@ export const ANALYTICS = {
 
   // TODO (backend): GET /analytics/trend?view=day|week|month|year
   trend: {
-    day:   { labels: ['6am','8am','10am','12pm','2pm','4pm','6pm','8pm'], sales: [3200,2800,3600,4100,3900,4500,4200,3800], expenses: [1800,1600,2000,2200,2100,2400,2300,2100] },
+    // Day total: sales=40000, expenses=28540 → spread across 8 time slots
+    day:   { labels: ['6am','8am','10am','12pm','2pm','4pm','6pm','8pm'], sales: [3800,4200,5100,6200,5800,6500,5400,3000], expenses: [2700,3000,3600,4400,4100,4600,3840,2300] },
+    // Week total: sales=158000, expenses=88500
     week:  { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],         sales: [18000,21000,14000,23000,28000,35000,19000], expenses: [10000,12000,8000,13500,15500,19000,10500] },
-    month: { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], sales: [58000,54000,62000,71000,68000,80000,75000,83000,90000,78000,84000,95000], expenses: [32000,30000,34000,39000,37000,43000,41000,45000,48000,42000,45000,51000] },
+    // Month total: sales=584000, expenses=340000 — spread across 12 months
+    month: { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], sales: [37400,35600,41200,46800,44900,52400,48700,54300,58000,50500,54300,59900], expenses: [21700,20800,23600,27400,26400,31200,28300,32100,34000,29300,32100,33100] },
+    // Year total: sales=6200000, expenses=3500000
     year:  { labels: ['2021','2022','2023','2024','2025','2026'], sales: [2800000,3400000,3800000,4200000,4800000,6200000], expenses: [1600000,1950000,2100000,2300000,2600000,3500000] },
   },
 

@@ -11,10 +11,6 @@ import brandLogo from '../../assets/images/427bffe9-d983-4566-9ec9-de6c2b1bdaa2-
 // ─── NAV CONFIGURATION ────────────────────────────────────────
 const NAV = [
   {
-    section: 'OVERVIEW',
-    items: [{ label: 'Analytics', icon: LineChart, to: '/' }],
-  },
-  {
     section: 'OPERATIONS',
     items: [
       { label: 'Point Of Sale', icon: Monitor, to: '/pos' },
@@ -28,6 +24,10 @@ const NAV = [
       { label: 'Inventory', icon: List, to: '/inventory' },
     ],
   },
+    {
+    section: 'OVERVIEW',
+    items: [{ label: 'Analytics', icon: LineChart, to: '/' }],
+  }
 
 ];
 

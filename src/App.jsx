@@ -9,6 +9,7 @@ import ProductManagementPage    from './pages/ProductManagementPage';
 import InventoryPage            from './pages/InventoryPage';
 import CustomerApp              from './pages/customer/CustomerApp';
 import ReceiptViewer            from './pages/customer/ReceiptViewer';
+import MobileQRScanner          from './pages/admin/MobileQRScanner';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(true);
@@ -21,6 +22,9 @@ export default function App() {
       {/* ── Customer-facing routes (no auth needed) ── */}
       <Route path="/customer/*"       element={<CustomerApp />} />
       <Route path="/receipt/:orderId" element={<ReceiptViewer />} />
+
+      {/* ── Mobile QR Scanner (PIN Protected) ── */}
+      <Route path="/admin/mobile-scanner" element={<MobileQRScanner />} />
 
       {/* ── Login ── */}
       <Route
