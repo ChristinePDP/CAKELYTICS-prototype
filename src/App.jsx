@@ -24,6 +24,7 @@ export default function App() {
       <Route path="/receipt/:orderId" element={<ReceiptViewer />} />
 
       {/* ── Mobile QR Scanner (PIN Protected) ── */}
+      <Route path="/admin/scan" element={<MobileQRScanner />} />
       <Route path="/admin/mobile-scanner" element={<MobileQRScanner />} />
 
       {/* ── Login ── */}

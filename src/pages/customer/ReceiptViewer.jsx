@@ -1,10 +1,16 @@
 import { useParams } from 'react-router-dom';
+import QRCode from 'react-qr-code';
 import { useApp } from '../../context/AppContext';
 import { Badge } from '../../components/ui';
 
 function statusVariant(s) {
   const map = { Confirmed: 'confirmed', Ready: 'ready', Completed: 'completed', Cancelled: 'cancelled' };
   return map[s] || 'default';
+}
+
+// Generate mock token: Base64 of orderId + secret key
+function generateReceiptToken(orderId) {
+  return btoa(orderId + '_secret_key');
 }
 
 export default function ReceiptViewer() {
@@ -131,6 +137,36 @@ export default function ReceiptViewer() {
         }}>
           <p style={{ margin: '0', fontSize: '12px', fontWeight: 700, color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             {order.paymentType === 'deposit' ? `Deposit ${fmt(order.amountPaid)}` : 'Fully Paid'}
+          </p>
+        </div>
+
+        {/* QR Code Section */}
+        <div style={{
+          marginTop: '24px',
+          padding: '16px',
+          backgroundColor: '#FDF8F6',
+          borderRadius: '12px',
+          border: '2px solid #E8D5CC',
+          textAlign: 'center'
+        }}>
+          <p style={{ margin: '0 0 12px 0', fontSize: '11px', fontWeight: 700, color: '#6B4F48', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            Receipt QR Code
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <QRCode
+              value={JSON.stringify({
+                orderId: order.id,
+                token: generateReceiptToken(order.id)
+              })}
+              size={160}
+              level="H"
+              includeMargin={true}
+              fgColor="#3D2B27"
+              bgColor="#FFFFFF"
+            />
+          </div>
+          <p style={{ margin: '12px 0 0 0', fontSize: '10px', color: '#8B6B5E', fontStyle: 'italic' }}>
+            Scan at pickup counter for verification
           </p>
         </div>
       </div>

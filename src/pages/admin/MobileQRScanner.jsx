@@ -1,20 +1,59 @@
-import { useState } from 'react';
-import { ArrowLeft, QrCode, Lock } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, QrCode, Lock, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../components/ui';
 import { Button, Modal } from '../../components/ui';
 
+const CORRECT_PIN = '123456';
+const MAX_ATTEMPTS = 3;
+const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes
+const SESSION_TIMEOUT = 15 * 60 * 1000; // 15 minutes
+const SECRET_KEY = '_secret_key';
+
+// ─── TOKEN VERIFICATION ──────────────────────────────────────
+function generateReceiptToken(orderId) {
+  return btoa(orderId + SECRET_KEY);
+}
+
+function verifyReceiptToken(orderId, token) {
+  const expectedToken = generateReceiptToken(orderId);
+  return expectedToken === token;
+}
+
 // ─── SCAN RESULT MODAL ────────────────────────────────────────
-function ScanResultModal({ order, isOpen, onClose, onStatusChange }) {
+function ScanResultModal({ order, isOpen, onClose, onStatusChange, tokenValid }) {
   if (!order) return null;
+
+  function fmt(n) {
+    return '₱' + Number(n).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  if (!tokenValid) {
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} size="md" title="⚠️ Invalid QR Code">
+        <div className="p-6 text-center">
+          <div className="mb-4 text-5xl">🔴</div>
+          <p className="text-red-700 font-black text-lg mb-2">Invalid or Unauthorized QR Code</p>
+          <p className="text-slate-600 text-sm mb-6">This QR code cannot be verified. It may have been tampered with or is invalid.</p>
+          <Button 
+            variant="primary" 
+            onClick={onClose}
+            className="w-full bg-red-600 text-white font-black py-3 rounded-lg hover:bg-red-700"
+          >
+            Close & Try Again
+          </Button>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="md"
       title={
         <div className="flex items-center gap-3">
-          <span className="font-black text-brand-950 text-lg">✓ Order Found</span>
+          <span className="font-black text-brand-950 text-lg">✓ Order Verified</span>
         </div>
       }
     >
@@ -39,6 +78,18 @@ function ScanResultModal({ order, isOpen, onClose, onStatusChange }) {
           </div>
         </div>
 
+        {/* Order Summary */}
+        <div className="bg-slate-50 rounded-lg p-4 border-2 border-slate-200">
+          <div className="flex justify-between mb-2 text-sm font-bold">
+            <span className="text-slate-600">Subtotal</span>
+            <span className="text-brand-950">{fmt(order.subtotal || order.grandTotal)}</span>
+          </div>
+          <div className="flex justify-between text-lg font-black border-t-2 border-slate-200 pt-2">
+            <span className="text-brand-950">Total</span>
+            <span className="text-green-700">{fmt(order.grandTotal)}</span>
+          </div>
+        </div>
+
         {/* Status-based content */}
         {order.status === 'Completed' && (
           <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center">
@@ -55,78 +106,139 @@ function ScanResultModal({ order, isOpen, onClose, onStatusChange }) {
         )}
 
         {(order.status === 'Confirmed' || order.status === 'Ready') && (
-          <div className="space-y-2">
-            <Button
-              variant="primary"
-              className="w-full bg-green-600 text-white font-black hover:bg-green-700 flex items-center justify-center gap-2 py-3 rounded-lg"
-              onClick={() => { onStatusChange(order.id, 'Completed'); onClose(); }}
-            >
-              ✓ Mark as Completed
-            </Button>
-
-            {order.status === 'Confirmed' && (
-              <Button
-                variant="secondary"
-                className="w-full bg-blue-100 text-blue-900 font-black hover:bg-blue-200 py-2 rounded-lg border-2 border-blue-200"
-                onClick={() => { onStatusChange(order.id, 'Ready'); onClose(); }}
-              >
-                Mark as Ready
-              </Button>
-            )}
-          </div>
+          <Button
+            variant="primary"
+            className="w-full bg-green-600 text-white font-black hover:bg-green-700 flex items-center justify-center gap-2 py-3 rounded-lg"
+            onClick={() => { onStatusChange(order.id, 'Completed'); onClose(); }}
+          >
+            ✓ Mark as Completed
+          </Button>
         )}
       </div>
     </Modal>
   );
 }
 
-// ─── PIN VERIFICATION MODAL ─────────────────────────────────────
-function PINVerificationModal({ isOpen, onClose, onSuccess }) {
+// ─── 6-DIGIT PIN ENTRY UI ───────────────────────────────────────
+function PINEntryUI({ onSuccess, onClose, isLockedOut, lockoutTimeRemaining, attempts, maxAttempts }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
-  const CORRECT_PIN = '1234'; // Change this to your preferred PIN
+  const inputRefs = useRef([]);
 
-  const handleVerify = () => {
-    if (pin === CORRECT_PIN) {
-      setError('');
-      setPin('');
-      onSuccess();
-    } else {
-      setError('Incorrect PIN');
-      setPin('');
+  useEffect(() => {
+    if (pin.length === 6) {
+      if (pin === CORRECT_PIN) {
+        setError('');
+        setPin('');
+        // Store PIN session in sessionStorage
+        sessionStorage.setItem('pinVerifiedAt', Date.now().toString());
+        sessionStorage.setItem('adminPinSession', 'true');
+        onSuccess();
+      } else {
+        setError('❌ Incorrect PIN');
+        setPin('');
+        inputRefs.current[0]?.focus();
+      }
+    }
+  }, [pin, onSuccess]);
+
+  const handleDigitInput = (index, value) => {
+    if (!/^\d?$/.test(value)) return;
+    
+    const newPin = pin.substring(0, index) + value + pin.substring(index + 1);
+    setPin(newPin);
+    
+    if (value && index < 5) {
+      inputRefs.current[index + 1]?.focus();
     }
   };
 
+  const handleKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !pin[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  if (isLockedOut) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-pink-50 p-4">
+        <div className="max-w-sm w-full bg-white rounded-3xl shadow-2xl p-8 text-center">
+          <div className="mb-6 text-6xl">🔒</div>
+          <h2 className="text-2xl font-black text-red-700 mb-2">Too Many Attempts</h2>
+          <p className="text-slate-600 text-sm mb-6">
+            Too many failed PIN attempts. Please try again in {Math.ceil(lockoutTimeRemaining / 1000)} second{Math.ceil(lockoutTimeRemaining / 1000) !== 1 ? 's' : ''}.
+          </p>
+          <div className="flex items-center justify-center gap-2 bg-red-50 border-2 border-red-200 rounded-lg p-4 mb-6">
+            <Clock size={20} className="text-red-700" />
+            <span className="text-red-700 font-black text-lg">{Math.ceil(lockoutTimeRemaining / 1000)}s</span>
+          </div>
+          <Button 
+            onClick={onClose}
+            className="w-full bg-slate-200 text-slate-900 font-black py-3 rounded-lg hover:bg-slate-300 transition-colors"
+          >
+            Back to Orders
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="sm" title="Admin PIN Required">
-      <div className="space-y-4 p-4">
-        <div className="flex items-center justify-center gap-2 text-amber-700 bg-amber-50 p-3 rounded-lg border-2 border-amber-200">
-          <Lock size={16} />
-          <span className="font-bold text-sm">Enter PIN to access scanner</span>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-50 to-amber-50 p-4">
+      <div className="max-w-sm w-full">
+        {/* Logo/Title */}
+        <div className="text-center mb-12">
+          <div className="mb-4 text-5xl">🍰</div>
+          <h1 className="text-3xl font-black text-brand-950 mb-1">Aileen & Niculus</h1>
+          <p className="text-brand-700 text-sm font-bold tracking-widest uppercase">Admin Verification</p>
         </div>
 
-        <input
-          type="password"
-          maxLength="4"
-          value={pin}
-          onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-          placeholder="Enter 4-digit PIN"
-          className="w-full border-2 border-brand-200 rounded-lg px-4 py-3 text-center text-2xl font-black tracking-widest focus:outline-none focus:border-brand-950"
-          onKeyPress={(e) => e.key === 'Enter' && handleVerify()}
-        />
+        {/* PIN Entry */}
+        <div className="bg-white rounded-3xl shadow-2xl p-8">
+          <div className="text-center mb-8">
+            <p className="text-slate-600 font-bold text-sm">Enter 6-digit PIN</p>
+            {error && (
+              <p className="text-red-600 font-black text-sm mt-2">{error}</p>
+            )}
+          </div>
 
-        {error && <p className="text-red-600 font-bold text-sm text-center">{error}</p>}
+          {/* PIN Digit Boxes */}
+          <div className="flex gap-3 justify-center mb-8">
+            {[0, 1, 2, 3, 4, 5].map((index) => (
+              <input
+                key={index}
+                ref={(el) => (inputRefs.current[index] = el)}
+                type="password"
+                inputMode="numeric"
+                maxLength="1"
+                value={pin[index] || ''}
+                onChange={(e) => handleDigitInput(index, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(index, e)}
+                className="w-16 h-16 text-center text-3xl font-black border-3 border-brand-300 rounded-2xl bg-brand-50 focus:bg-brand-100 focus:border-brand-600 focus:outline-none transition-all"
+              />
+            ))}
+          </div>
 
-        <Button
-          variant="primary"
-          className="w-full bg-brand-950 text-white font-black"
-          onClick={handleVerify}
-          disabled={pin.length !== 4}
-        >
-          Verify
-        </Button>
+          {/* Attempt Counter */}
+          <div className="text-center text-xs text-slate-500 font-bold mb-6">
+            Attempt {maxAttempts - attempts + 1} of {maxAttempts}
+          </div>
+
+          {/* Cancel Button */}
+          <Button 
+            onClick={onClose}
+            className="w-full bg-slate-100 text-slate-700 font-black py-3 rounded-lg hover:bg-slate-200 transition-colors"
+          >
+            Cancel
+          </Button>
+        </div>
+
+        {/* Security Note */}
+        <p className="text-center text-xs text-slate-500 mt-8 flex items-center justify-center gap-2">
+          <Lock size={14} /> PIN session expires after 15 minutes of inactivity
+        </p>
       </div>
-    </Modal>
+    </div>
   );
 }
 
@@ -136,10 +248,59 @@ export default function MobileQRScanner() {
   const { orders, updateOrderStatus } = useApp();
   const { show: showToast } = useToast();
 
-  const [isPinVerified, setIsPinVerified] = useState(false);
-  const [showPinModal, setShowPinModal] = useState(true);
+  // PIN & Session Management
+  const [isPinVerified, setIsPinVerified] = useState(() => {
+    const pinVerifiedAt = sessionStorage.getItem('pinVerifiedAt');
+    if (pinVerifiedAt) {
+      const timeElapsed = Date.now() - parseInt(pinVerifiedAt);
+      return timeElapsed < SESSION_TIMEOUT;
+    }
+    return false;
+  });
+
+  const [attempts, setAttempts] = useState(0);
+  const [isLockedOut, setIsLockedOut] = useState(false);
+  const [lockoutEndTime, setLockoutEndTime] = useState(null);
+  const [lockoutTimeRemaining, setLockoutTimeRemaining] = useState(0);
+
+  // Scan Result
   const [scanResultOrder, setScanResultOrder] = useState(null);
   const [scanResultOpen, setScanResultOpen] = useState(false);
+  const [tokenValid, setTokenValid] = useState(false);
+
+  // Lockout countdown
+  useEffect(() => {
+    if (!isLockedOut) return;
+    const interval = setInterval(() => {
+      const remaining = lockoutEndTime - Date.now();
+      if (remaining <= 0) {
+        setIsLockedOut(false);
+        setAttempts(0);
+        setLockoutEndTime(null);
+        clearInterval(interval);
+      } else {
+        setLockoutTimeRemaining(remaining);
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, [isLockedOut, lockoutEndTime]);
+
+  // Session timeout check
+  useEffect(() => {
+    const pinVerifiedAt = sessionStorage.getItem('pinVerifiedAt');
+    if (!pinVerifiedAt) return;
+
+    const interval = setInterval(() => {
+      const timeElapsed = Date.now() - parseInt(pinVerifiedAt);
+      if (timeElapsed > SESSION_TIMEOUT) {
+        setIsPinVerified(false);
+        sessionStorage.removeItem('pinVerifiedAt');
+        sessionStorage.removeItem('adminPinSession');
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isPinVerified]);
 
   const handleStatusChange = (id, status) => {
     updateOrderStatus(id, status);
@@ -150,91 +311,126 @@ export default function MobileQRScanner() {
   const handleScan = (detectedCodes) => {
     if (detectedCodes && detectedCodes.length > 0) {
       const rawData = detectedCodes[0].rawValue;
-      processOrderSearch(rawData);
+      processQRData(rawData);
     }
   };
 
-  // Process order search
-  const processOrderSearch = (scannedId) => {
-    const cleanId = scannedId.replace('#', '').trim().toUpperCase();
-    const foundOrder = orders.find(o => o.id.replace('#', '').toUpperCase() === cleanId);
-    
-    if (foundOrder) {
-      setScanResultOrder(foundOrder);
-      setScanResultOpen(true);
-      showToast(`Order ${cleanId} found!`, 'success');
-    } else {
-      const demoOrders = orders.filter(o => o.status === 'Confirmed' || o.status === 'Ready');
-      if (demoOrders.length > 0) {
-        const randomDemo = demoOrders[Math.floor(Math.random() * demoOrders.length)];
-        setScanResultOrder(randomDemo);
+  // Process QR Data with Token Verification
+  const processQRData = (qrData) => {
+    try {
+      const payload = JSON.parse(qrData);
+      const { orderId, token } = payload;
+
+      // Verify token
+      const isValid = verifyReceiptToken(orderId, token);
+
+      // Find order
+      const foundOrder = orders.find(o => o.id === orderId);
+
+      if (foundOrder && isValid) {
+        setScanResultOrder(foundOrder);
+        setTokenValid(true);
         setScanResultOpen(true);
-        showToast(`Demo: Showing ${randomDemo.id}`, 'success');
+        showToast('✓ QR verified successfully!', 'success');
+      } else if (!isValid) {
+        showToast('❌ Invalid QR code (token mismatch)', 'error');
+        setTokenValid(false);
+        setScanResultOrder(null);
+        setScanResultOpen(true);
+      } else {
+        showToast('❌ Order not found', 'error');
+      }
+    } catch (e) {
+      // If not valid JSON, try to find order by ID
+      const cleanId = qrData.replace('#', '').trim().toUpperCase();
+      const foundOrder = orders.find(o => o.id.replace('#', '').toUpperCase() === cleanId);
+
+      if (foundOrder) {
+        setScanResultOrder(foundOrder);
+        setTokenValid(true);
+        setScanResultOpen(true);
+        showToast(`Order ${cleanId} found!`, 'success');
+      } else {
+        showToast('❌ Invalid QR code format or order not found', 'error');
       }
     }
   };
+
+  const handlePinSuccess = () => {
+    setIsPinVerified(true);
+  };
+
+  const handlePinClose = () => {
+    navigate('/orders');
+  };
+
+  if (!isPinVerified) {
+    return (
+      <PINEntryUI
+        onSuccess={handlePinSuccess}
+        onClose={handlePinClose}
+        isLockedOut={isLockedOut}
+        lockoutTimeRemaining={lockoutTimeRemaining}
+        attempts={attempts}
+        maxAttempts={MAX_ATTEMPTS}
+      />
+    );
+  }
 
   return (
     <div className="bg-brand-950 min-h-screen flex flex-col">
       {/* Header */}
       <div className="bg-brand-900 text-white p-4 flex items-center gap-3 shadow-lg">
         <button
-          onClick={() => navigate('/orders')}
+          onClick={() => {
+            setIsPinVerified(false);
+            sessionStorage.removeItem('pinVerifiedAt');
+            sessionStorage.removeItem('adminPinSession');
+            navigate('/orders');
+          }}
           className="p-2 hover:bg-brand-800 rounded-lg transition-colors"
         >
           <ArrowLeft size={24} />
         </button>
         <div>
           <h1 className="text-xl font-black">Mobile QR Scanner</h1>
-          <p className="text-xs text-brand-200 font-bold tracking-widest">Admin Only</p>
+          <p className="text-xs text-brand-200 font-bold tracking-widest">PIN Verified • Admin Only</p>
         </div>
       </div>
 
       {/* Scanner Container */}
-      {isPinVerified && (
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <div className="w-full max-w-sm">
-            {/* Camera View */}
-            <div className="bg-black rounded-2xl overflow-hidden shadow-2xl mb-6" style={{ aspectRatio: '1' }}>
-              <div className="w-full h-full">
-                <Scanner
-                  onScan={handleScan}
-                  onError={(error) => {
-                    console.error('Scanner error:', error);
-                    showToast(`Camera error: ${error?.message || 'Unable to access camera'}`, 'error');
-                  }}
-                  formats={['qr_code']}
-                  components={{ audio: false, torch: true }}
-                  constraints={{
-                    video: {
-                      facingMode: 'environment',
-                      width: { ideal: 1920 },
-                      height: { ideal: 1080 }
-                    }
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Instructions */}
-            <div className="bg-white/10 backdrop-blur text-white rounded-xl p-4 text-center">
-              <QrCode className="mx-auto mb-2" size={32} />
-              <p className="font-black text-sm">Point camera at receipt QR code</p>
-              <p className="text-xs text-white/70 mt-1">Automatic detection when order is found</p>
+      <div className="flex-1 flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-sm">
+          {/* Camera View */}
+          <div className="bg-black rounded-2xl overflow-hidden shadow-2xl mb-6" style={{ aspectRatio: '1' }}>
+            <div className="w-full h-full">
+              <Scanner
+                onScan={handleScan}
+                onError={(error) => {
+                  console.error('Scanner error:', error);
+                  showToast(`Camera error: ${error?.message || 'Unable to access camera'}`, 'error');
+                }}
+                formats={['qr_code']}
+                components={{ audio: false, torch: true }}
+                constraints={{
+                  video: {
+                    facingMode: 'environment',
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                  }
+                }}
+              />
             </div>
           </div>
-        </div>
-      )}
 
-      {/* PIN Verification Modal */}
-      <PINVerificationModal
-        isOpen={showPinModal && !isPinVerified}
-        onClose={() => navigate('/orders')}
-        onSuccess={() => {
-          setShowPinModal(false);
-          setIsPinVerified(true);
-        }}
-      />
+          {/* Instructions */}
+          <div className="bg-white/10 backdrop-blur text-white rounded-xl p-4 text-center">
+            <QrCode className="mx-auto mb-2" size={32} />
+            <p className="font-black text-sm">Point camera at receipt QR code</p>
+            <p className="text-xs text-white/70 mt-1">Automatic detection and verification</p>
+          </div>
+        </div>
+      </div>
 
       {/* Scan Result Modal */}
       <ScanResultModal
@@ -242,6 +438,7 @@ export default function MobileQRScanner() {
         isOpen={scanResultOpen}
         onClose={() => setScanResultOpen(false)}
         onStatusChange={handleStatusChange}
+        tokenValid={tokenValid}
       />
     </div>
   );
