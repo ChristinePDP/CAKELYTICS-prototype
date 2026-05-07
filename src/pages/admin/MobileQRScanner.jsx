@@ -402,17 +402,7 @@ export default function MobileQRScanner() {
     <div className="bg-brand-950 min-h-screen flex flex-col">
       {/* Header */}
       <div className="bg-brand-900 text-white p-4 flex items-center gap-3 shadow-lg">
-        <button
-          onClick={() => {
-            setIsPinVerified(false);
-            sessionStorage.removeItem('pinVerifiedAt');
-            sessionStorage.removeItem('adminPinSession');
-            navigate('/orders');
-          }}
-          className="p-2 hover:bg-brand-800 rounded-lg transition-colors"
-        >
-          <ArrowLeft size={24} />
-        </button>
+        
         <div>
           <h1 className="text-xl font-black">Mobile QR Scanner</h1>
           <p className="text-xs text-brand-200 font-bold tracking-widest">PIN Verified • Admin Only</p>

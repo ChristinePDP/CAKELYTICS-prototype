@@ -7,6 +7,11 @@ import { QRCodeSVG } from 'qrcode.react';
 import html2canvas from 'html2canvas'; 
 import { CustomerHeader, CustomerFooter } from './CustomerLayout';
 
+const SECRET_KEY = '_secret_key';
+function generateReceiptToken(orderId) {
+  return btoa(orderId + SECRET_KEY);
+}
+
 export default function CustomerConfirm({ orderData, orderId }) {
   const navigate = useNavigate();
   const ticketRef = useRef(null); 
@@ -32,7 +37,11 @@ export default function CustomerConfirm({ orderData, orderId }) {
 
   const fmt = (n) => '₱' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const qrLink = `${window.location.origin}/receipt/${finalOrder.id}`;
+  // QR payload must match what MobileQRScanner expects: { orderId, token }
+  const qrPayload = JSON.stringify({
+    orderId: finalOrder.id,
+    token: generateReceiptToken(finalOrder.id)
+  });
 
   const handleSaveAsImage = async () => {
     if (!ticketRef.current) return;
@@ -126,7 +135,7 @@ export default function CustomerConfirm({ orderData, orderId }) {
             <div className="flex flex-col items-center">
               <div className="p-2.5 bg-white border border-[#EAE4E0] rounded-xl mb-2 shadow-sm">
                 <QRCodeSVG 
-                  value={qrLink} 
+                  value={qrPayload} 
                   size={120} 
                   bgColor={"#ffffff"} 
                   fgColor={"#3D2B27"} 
