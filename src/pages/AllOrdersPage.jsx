@@ -350,15 +350,25 @@ export default function AllOrdersPage() {
   // ─── CENTRALIZED SEARCH LOGIC (Ginagamit ng QR at Manual Input) ───
   const processOrderSearch = (scannedId) => {
     try {
+      // Normalize payload: allow wrappers like 'CAKELYTICS-SECURE:...'
+      let payloadStr = scannedId;
+      const firstBrace = String(scannedId).indexOf('{');
+      if (firstBrace >= 0) payloadStr = scannedId.slice(firstBrace);
+
       // Try to parse as JSON (new QR format with token)
-      const payload = JSON.parse(scannedId);
+      const payload = JSON.parse(payloadStr);
       const { orderId, token } = payload;
 
       // Verify token
       const isValid = verifyReceiptToken(orderId, token);
 
       // Find order
-      const foundOrder = orders.find(o => o.id === orderId);
+      const foundOrder = orders.find(o =>
+        o.id === orderId ||
+        o.id === `ORD-${orderId}` ||
+        `ORD-${o.id}` === orderId ||
+        o.id.replace('#', '') === orderId.replace('#', '')
+      );
 
       if (foundOrder && isValid) {
         setScannerOpen(false);
@@ -378,7 +388,7 @@ export default function AllOrdersPage() {
     } catch (e) {
       // Not JSON, try treating as plain order ID
       const cleanId = scannedId.replace('#', '').trim().toUpperCase();
-      const foundOrder = orders.find(o => o.id.replace('#', '').toUpperCase() === cleanId);
+      const foundOrder = orders.find(o => o.id.replace('#', '').toUpperCase() === cleanId || (`ORD-${o.id}`).replace('#', '').toUpperCase() === cleanId || o.id.toUpperCase() === cleanId);
       
       if (foundOrder) {
         setScannerOpen(false);
@@ -407,11 +417,40 @@ export default function AllOrdersPage() {
 
   // QR SCAN HANDLER
   const handleScan = (detectedCodes) => {
-    if (detectedCodes && detectedCodes.length > 0) {
-      const rawData = detectedCodes[0].rawValue;
+    try {
+      console.debug('Scanner payload:', detectedCodes);
+
+      if (!detectedCodes) return;
+
+      let rawData = null;
+
+      // If scanner returns an array of results (some libs do)
+      if (Array.isArray(detectedCodes)) {
+        if (detectedCodes.length === 0) return;
+        const first = detectedCodes[0];
+        rawData = first?.rawValue ?? first?.text ?? first?.data ?? (typeof first === 'string' ? first : null);
+      } else if (typeof detectedCodes === 'string') {
+        // Some scanners call onScan with the decoded string directly
+        rawData = detectedCodes;
+      } else if (typeof detectedCodes === 'object') {
+        // Some scanners return an object with text/data/rawValue
+        rawData = detectedCodes?.rawValue ?? detectedCodes?.text ?? detectedCodes?.data ?? JSON.stringify(detectedCodes);
+      }
+
+      if (!rawData) {
+        console.debug('No raw QR data extracted from scanner payload');
+        return;
+      }
+
+      // Prevent duplicate triggers by closing scanner UI early
+      setScannerOpen(false);
+
       // DEMO MODE: Accept any QR code and use it to lookup orders
       // In production, you'd check for 'CAKELYTICS-SECURE:' format
       processOrderSearch(rawData);
+    } catch (err) {
+      console.error('handleScan error', err);
+      showToast(`Scan error: ${err?.message || err}`, 'error');
     }
   };
 
