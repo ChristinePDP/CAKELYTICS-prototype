@@ -105,11 +105,9 @@ function CelebrationSlipModal({ product, onClose, onConfirm }) {
   const [qty, setQty] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState(hasVariants ? product.variants[0] : null);
   
-  // Tarp States
   const [tarpNote, setTarpNote] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState([]);
 
-  // Balloon States
   const [balloonSize, setBalloonSize] = useState('10 inches (Standard)');
   const [colorType, setColorType] = useState('Assorted Colors');
   const [specificColors, setSpecificColors] = useState('');
@@ -121,11 +119,8 @@ function CelebrationSlipModal({ product, onClose, onConfirm }) {
   const handleFileChange = (e) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      // I-extract muna yung files papuntang Array bago mag-update ng state
-      const newFiles = Array.from(files);
-      setUploadedFiles(prev => [...prev, ...newFiles]);
+      setUploadedFiles(prev => [...prev, ...Array.from(files)]);
     }
-    // I-reset ang input value para ma-trigger uli ang onChange kahit same file ang i-upload
     e.target.value = '';
   };
 
@@ -312,6 +307,20 @@ export default function CustomerMenu({ cart, setCart }) {
     });
   };
 
+  // ─── IBINALIK: CART CONTROLS ───
+  const changeQty = (index, delta) => {
+    setCart(prev => prev.map((item, i) => {
+      if (i === index) {
+        return { ...item, qty: item.qty + delta };
+      }
+      return item;
+    }).filter(i => i.qty > 0)); // Automatic remove if qty hits 0
+  };
+
+  const removeItem = (index) => {
+    setCart(prev => prev.filter((_, i) => i !== index));
+  };
+
   return (
     <div className="bg-[#FCFAF9] min-h-screen">
       <CustomerHeader page="menu" cartCount={cart.reduce((s, i) => s + i.qty, 0)} />
@@ -356,30 +365,48 @@ export default function CustomerMenu({ cart, setCart }) {
         </div>
 
         {/* ── Sidebar Cart ── */}
-        <div className="bg-white p-8 rounded-3xl border border-[#EAE4E0] h-fit sticky top-[160px]">
-          <h3 className="text-xl font-black text-[#4A3B36] mb-6">Your Cart</h3>
+        <div className="bg-white p-8 rounded-3xl border border-[#EAE4E0] h-fit sticky top-[160px] flex flex-col max-h-[calc(100vh-180px)]">
+          <h3 className="text-xl font-black text-[#4A3B36] mb-6 shrink-0">Your Cart</h3>
+          
           {cart.length === 0 ? (
-            <p className="text-[#9E8F88] text-[14px]">Your cart is empty. Add items from the menu.</p>
+            <p className="text-[#9E8F88] text-[14px] mb-6">Your cart is empty. Add items from the menu.</p>
           ) : (
             <>
-              <div className="space-y-4 mb-6">
-                {cart.slice(0, 5).map((item, i) => (
-                  <div key={i} className="flex justify-between text-[14px]">
-                    <div className="flex-1 pr-4">
-                      <span className="font-bold text-[#5A453C]">{item.qty}x {item.name}</span>
-                      {item.note && <p className="text-[11px] text-[#9E8F88] leading-snug mt-0.5 line-clamp-1">📝 {item.note}</p>}
-                      {item.file && <p className="text-[11px] text-[#8C6B22] leading-snug mt-0.5 line-clamp-1">📎 {item.file}</p>}
+              {/* Ginawang scrollable ang mismong cart items list para hindi mahaba pababa */}
+              <div className="space-y-3 mb-6 overflow-y-auto pr-2 custom-scrollbar flex-1">
+                {cart.map((item, i) => (
+                  <div key={i} className="flex justify-between items-start bg-[#FCFAF9] p-4 rounded-2xl border border-[#EAE4E0]">
+                    <div className="flex-1 pr-3 min-w-0">
+                      <span className="font-bold text-[#5A453C] block text-[14px] truncate">{item.name}</span>
+                      <span className="text-[#9E8F88] font-bold text-[12px] block mt-0.5">₱{item.price.toLocaleString()}</span>
+                      
+                      {item.note && <p className="text-[11px] text-[#9E8F88] leading-snug mt-1.5 line-clamp-2">📝 {item.note}</p>}
+                      {item.file && <p className="text-[11px] text-[#8C6B22] leading-snug mt-1 line-clamp-1">📎 {item.file}</p>}
+
+                      {/* Controls Area */}
+                      <div className="flex items-center gap-3 mt-3">
+                        <div className="flex items-center gap-1 bg-white border border-[#EAE4E0] rounded-lg px-1.5 py-1">
+                          <button onClick={() => changeQty(i, -1)} className="w-6 h-6 flex items-center justify-center text-[#5A453C] font-black hover:bg-[#F5EFEB] rounded-md transition-colors border-none cursor-pointer">−</button>
+                          <span className="w-5 text-center text-[13px] font-black text-[#4A3B36]">{item.qty}</span>
+                          <button onClick={() => changeQty(i, 1)} className="w-6 h-6 flex items-center justify-center text-[#5A453C] font-black hover:bg-[#F5EFEB] rounded-md transition-colors border-none cursor-pointer">+</button>
+                        </div>
+                        <button onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600 text-[11px] uppercase tracking-wider font-black bg-transparent border-none cursor-pointer">
+                          Remove
+                        </button>
+                      </div>
                     </div>
-                    <span className="font-bold text-[#4A3B36]">₱{(item.price * item.qty).toLocaleString()}</span>
+                    {/* Item Total Price */}
+                    <span className="font-black text-[#4A3B36] text-[15px] shrink-0">₱{(item.price * item.qty).toLocaleString()}</span>
                   </div>
                 ))}
-                {cart.length > 5 && <div className="text-[12px] text-[#9E8F88] italic">+ {cart.length - 5} more items</div>}
               </div>
-              <div className="border-t border-[#EAE4E0] pt-4 mb-6 flex justify-between font-black text-[16px] text-[#4A3B36]">
+              
+              <div className="border-t border-[#EAE4E0] pt-5 mb-6 flex justify-between font-black text-[16px] text-[#4A3B36] shrink-0">
                 <span>Total</span>
-                <span>₱{cart.reduce((s, i) => s + i.price * i.qty, 0).toLocaleString()}</span>
+                <span className="text-[20px]">₱{cart.reduce((s, i) => s + i.price * i.qty, 0).toLocaleString()}</span>
               </div>
-              <button onClick={() => navigate('/customer/checkout')} className="w-full bg-[#5A453C] text-white py-3.5 rounded-xl font-black text-[14px] uppercase tracking-wider hover:bg-[#4A3B36] transition-colors border-none cursor-pointer">
+              
+              <button onClick={() => navigate('/customer/checkout')} className="w-full bg-[#5A453C] text-white py-4 rounded-xl font-black text-[14px] uppercase tracking-wider hover:bg-[#4A3B36] transition-colors border-none cursor-pointer shrink-0 shadow-lg shadow-[#5A453C]/20">
                 Checkout Now
               </button>
             </>

@@ -7,18 +7,6 @@ import { useToast } from '../components/ui';
 import { Badge, Button, Modal, Table, Tr, Td, Pagination, SearchBar, FilterPills, Input } from '../components/ui';
 import { ORDER_STATUSES } from '../data/dummyData';
 
-// Token verification helpers
-const SECRET_KEY = '_secret_key';
-
-function generateReceiptToken(orderId) {
-  return btoa(orderId + SECRET_KEY);
-}
-
-function verifyReceiptToken(orderId, token) {
-  const expectedToken = generateReceiptToken(orderId);
-  return expectedToken === token;
-}
-
 // Format para sa pera
 function fmt(n) {
   return '₱' + Number(n).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -188,31 +176,11 @@ function OrderDetailModal({ order, isOpen, onClose, onStatusChange }) {
 }
 
 // ─── SCAN RESULT MODAL ────────────────────────────────────────
-function ScanResultModal({ order, isOpen, onClose, onStatusChange, onViewDetails, tokenValid }) {
+function ScanResultModal({ order, isOpen, onClose, onStatusChange, onViewDetails }) {
   if (!order) return null;
 
   function fmt(n) {
     return '₱' + Number(n).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-
-  // Show invalid token error
-  if (!tokenValid) {
-    return (
-      <Modal isOpen={isOpen} onClose={onClose} size="md" title="⚠️ Invalid QR Code">
-        <div className="p-6 text-center">
-          <div className="mb-4 text-5xl">🔴</div>
-          <p className="text-red-700 font-black text-lg mb-2">Invalid or Unauthorized QR Code</p>
-          <p className="text-slate-600 text-sm mb-6">This QR code cannot be verified. It may have been tampered with or is invalid.</p>
-          <Button 
-            variant="primary" 
-            onClick={onClose}
-            className="w-full bg-red-600 text-white font-black py-3 rounded-lg hover:bg-red-700"
-          >
-            Close & Try Again
-          </Button>
-        </div>
-      </Modal>
-    );
   }
 
   return (
@@ -325,12 +293,9 @@ export default function AllOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [detailOpen, setDetailOpen]       = useState(false);
   
-  // State para sa ScanResultModal
   const [scanResultOpen, setScanResultOpen]   = useState(false);
   const [scanResultOrder, setScanResultOrder] = useState(null);
-  const [tokenValid, setTokenValid] = useState(false);
   
-  // State para sa QR Scanner Modal
   const [scannerOpen, setScannerOpen]     = useState(false);
   const [manualOrderId, setManualOrderId] = useState('');
 
@@ -347,75 +312,50 @@ export default function AllOrdersPage() {
     showToast(`Order status updated to ${status}.`);
   };
 
-  // ─── CENTRALIZED SEARCH LOGIC (Ginagamit ng QR at Manual Input) ───
+  // ─── CENTRALIZED SEARCH LOGIC (DEMO MODE ENABLED) ───
   const processOrderSearch = (scannedId) => {
+    let foundOrder = null;
+
     try {
-      // Try to parse as JSON (new QR format with token)
-      const payload = JSON.parse(scannedId);
-      const { orderId, token } = payload;
+      // Subukan basahin as JSON (qrPayload)
+      let payloadStr = String(scannedId);
+      const firstBrace = payloadStr.indexOf('{');
+      if (firstBrace >= 0) payloadStr = payloadStr.slice(firstBrace);
 
-      // Verify token
-      const isValid = verifyReceiptToken(orderId, token);
+      const payload = JSON.parse(payloadStr);
+      const { orderId } = payload;
+      foundOrder = orders.find(o => o.id === orderId);
 
-      // Find order
-      const foundOrder = orders.find(o => o.id === orderId);
-
-      if (foundOrder && isValid) {
-        setScannerOpen(false);
-        setManualOrderId('');
-        setScanResultOrder(foundOrder);
-        setTokenValid(true);
-        setScanResultOpen(true);
-        showToast('✓ QR verified successfully!', 'success');
-      } else if (!isValid) {
-        showToast('❌ Invalid QR code (token mismatch)', 'error');
-        setTokenValid(false);
-        setScanResultOrder(null);
-        setScanResultOpen(true);
-      } else {
-        showToast('❌ Order not found', 'error');
-      }
     } catch (e) {
-      // Not JSON, try treating as plain order ID
-      const cleanId = scannedId.replace('#', '').trim().toUpperCase();
-      const foundOrder = orders.find(o => o.id.replace('#', '').toUpperCase() === cleanId);
-      
-      if (foundOrder) {
-        setScannerOpen(false);
-        setManualOrderId('');
-        setScanResultOrder(foundOrder);
-        setTokenValid(true); // Accept plain ID as valid (fallback)
-        setScanResultOpen(true);
-        showToast(`Order ${cleanId} found!`, 'success');
-      } else {
-        // DEMO MODE: If not found, show a demo order for testing
-        const demoOrders = orders.filter(o => o.status === 'Confirmed' || o.status === 'Ready');
-        if (demoOrders.length > 0) {
-          const randomDemo = demoOrders[Math.floor(Math.random() * demoOrders.length)];
-          setScannerOpen(false);
-          setManualOrderId('');
-          setScanResultOrder(randomDemo);
-          setTokenValid(true);
-          setScanResultOpen(true);
-          showToast(`Demo mode: Showing ${randomDemo.id}`, 'success');
-        } else {
-          showToast(`Order ${cleanId} not found in the system.`, 'error');
-        }
-      }
+      // Kung plain text o manual input
+      const cleanId = String(scannedId).replace('#', '').trim().toUpperCase();
+      foundOrder = orders.find(o => o.id.replace('#', '').toUpperCase() === cleanId);
+    }
+
+    // DEMO OVERRIDE: Kung hindi mahanap yung eksaktong ID (e.g. dummy qr generated), kumuha nalang sa dummyData
+    if (!foundOrder && orders.length > 0) {
+      const demoOrders = orders.filter(o => o.status === 'Confirmed' || o.status === 'Ready');
+      foundOrder = demoOrders.length > 0 ? demoOrders[0] : orders[0];
+    }
+
+    if (foundOrder) {
+      setScannerOpen(false);
+      setManualOrderId('');
+      setScanResultOrder(foundOrder);
+      setScanResultOpen(true);
+      showToast(`✓ Order ${foundOrder.id} scanned successfully!`, 'success');
+    } else {
+      showToast('❌ System has no orders to show.', 'error');
     }
   };
 
-  // QR SCAN HANDLER
   const handleScan = (detectedCodes) => {
     if (detectedCodes && detectedCodes.length > 0) {
       const rawData = detectedCodes[0].rawValue;
-      // DEMO MODE: Accept any QR code and use it to lookup orders
-      // In production, you'd check for 'CAKELYTICS-SECURE:' format
       processOrderSearch(rawData);
     }
   };
 
-  // MANUAL INPUT HANDLER
   const handleManualSubmit = (e) => {
     e.preventDefault();
     if (!manualOrderId) return;
@@ -435,8 +375,6 @@ export default function AllOrdersPage() {
 
   return (
     <div className="space-y-5">
-      
-      {/* ─── Search and Filters area ─── */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
           <SearchBar 
@@ -452,7 +390,6 @@ export default function AllOrdersPage() {
           />
         </div>
         
-        {/* QR Scanner Button */}
         <div className="flex items-center gap-3">
           <Button 
             variant="primary" 
@@ -471,7 +408,6 @@ export default function AllOrdersPage() {
         </div>
       </div>
 
-      {/* ─── Main Table ─── */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <Table columns={columns}>
           {paged.map(order => (
@@ -526,20 +462,16 @@ export default function AllOrdersPage() {
         onClose={() => setScanResultOpen(false)}
         onStatusChange={handleStatusChange}
         onViewDetails={() => { setScanResultOpen(false); setSelectedOrder(scanResultOrder); setDetailOpen(true); }}
-        tokenValid={tokenValid}
       />
 
-      {/* ─── MODAL PARA SA QR SCANNER & MANUAL ENTRY ─── */}
       <Modal
         isOpen={scannerOpen}
         onClose={() => setScannerOpen(false)}
         size="md"
         title="Find Customer Order"
-        subtitle="I-scan ang QR Code ng customer o i-type ang Order ID kung malabo ang camera."
+        subtitle="I-scan ang QR Code ng customer o i-type ang Order ID."
       >
         <div className="flex flex-col gap-6 p-2">
-          
-          {/* CAMERA SCANNER AREA (Tinanngal ang overlay frame para mabilis mag-scan) */}
           <div className="w-full bg-black rounded-xl overflow-hidden shadow-inner flex items-center justify-center relative min-h-[300px]">
             {scannerOpen && (
               <div className="w-full h-full">
@@ -572,7 +504,6 @@ export default function AllOrdersPage() {
             <hr className="flex-1 border-brand-200" />
           </div>
 
-          {/* MANUAL ENTRY FORM */}
           <form onSubmit={handleManualSubmit} className="flex gap-2">
             <div className="flex-1">
               <Input 
@@ -586,10 +517,6 @@ export default function AllOrdersPage() {
               <Search size={16} />
             </Button>
           </form>
-
-          {/* DEMO BUTTON FOR TESTING */}
-          
-          
         </div>
       </Modal>
       
