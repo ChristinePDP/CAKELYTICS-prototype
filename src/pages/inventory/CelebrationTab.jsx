@@ -7,7 +7,6 @@ import { ingStatus } from '../../utils/inventoryHelpers';
 const PER_PAGE = 10;
 
 export default function CelebrationTab() {
-  // NOTE: Siguraduhing may 'materials', 'addMaterial', 'updateMaterial', at 'deleteMaterial' sa AppContext
   const { materials = [], addMaterial, updateMaterial, deleteMaterial } = useApp();
   const { show: showToast } = useToast();
   const [page, setPage]             = useState(1);
@@ -39,7 +38,7 @@ export default function CelebrationTab() {
         <div className="flex items-center justify-between p-4 border-b border-brand-100">
           <div>
             <h3 className=" font-bold text-brand-800">Celebration Materials</h3>
-            <p className="text-xs text-brand-400 mt-0.5">Mag-manage ng Balloons, Tarpaulin, at iba pang party add-ons.</p>
+            <p className="text-xs text-brand-400 mt-0.5">Mag-manage ng Printed Balloons, Tarpaulin, at iba pang party add-ons.</p>
           </div>
           <Button variant="dark" onClick={() => { setEditMat(null); setModalOpen(true); }}>
             <Plus size={14} /> Add New Material
@@ -91,12 +90,18 @@ export default function CelebrationTab() {
 
 // ─── Celebration Material Modal ───
 function MaterialModal({ isOpen, onClose, material, onSave }) {
+  const [name, setName]   = useState('');
+  const [unit, setUnit]   = useState('pcs');
   const [stock, setStock] = useState('');
-  const [min, setMin]     = useState(material?.min ?? '');
+  const [min, setMin]     = useState('');
   const [cost, setCost]   = useState('');
+  
   const isEdit = !!material?.id;
 
+  // Reset/Set states kapag bumubukas ang modal
   useState(() => {
+    setName('');
+    setUnit('pcs');
     setStock('');
     setMin(material?.min ?? '');
     setCost('');
@@ -105,13 +110,15 @@ function MaterialModal({ isOpen, onClose, material, onSave }) {
   const addedQty = parseFloat(stock) || 0;
 
   const handleSave = () => {
-    if (!isEdit && !stock) return;
+    if (!isEdit && (!stock || !name)) return;
+    
     const newStock = isEdit ? +(material.stock + addedQty).toFixed(4) : addedQty;
-    onSave(
-      { stock: newStock, min: parseFloat(min), costPerUnit: cost && addedQty ? parseFloat(cost) / addedQty : material?.costPerUnit || 0 },
-      addedQty,
-      isEdit ? 'Stock added' : 'Initial stock'
-    );
+    
+    const dataToSave = isEdit 
+      ? { stock: newStock, min: parseFloat(min), costPerUnit: cost && addedQty ? parseFloat(cost) / addedQty : material?.costPerUnit || 0 }
+      : { name, unit, stock: newStock, min: parseFloat(min), costPerUnit: cost ? parseFloat(cost) / addedQty : 0, category: 'Celebration Material' };
+
+    onSave(dataToSave, addedQty, isEdit ? 'Stock added' : 'Initial stock');
     onClose();
   };
 
@@ -119,12 +126,12 @@ function MaterialModal({ isOpen, onClose, material, onSave }) {
     <Modal
       isOpen={isOpen} onClose={onClose}
       title={isEdit ? `Add Stock — ${material?.name}` : 'Add New Celebration Material'}
-      subtitle={isEdit ? `Unit: ${material?.unit} · Current: ${material?.stock}` : 'I-record ang mga party materials kagaya ng balloons at tarpaulin.'}
+      subtitle={isEdit ? `Unit: ${material?.unit} · Current: ${material?.stock}` : 'I-record ang mga bagong materials kagaya ng Tarpaulin at Balloons.'}
       size="md"
       footer={
         <div className="flex gap-3 justify-end">
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" onClick={handleSave} disabled={isEdit ? addedQty <= 0 : !stock}>
+          <Button variant="primary" onClick={handleSave} disabled={isEdit ? addedQty <= 0 : (!stock || !name)}>
             {isEdit ? 'Add Stock' : 'Save Material'}
           </Button>
         </div>
@@ -133,16 +140,28 @@ function MaterialModal({ isOpen, onClose, material, onSave }) {
       <div className="space-y-4">
         {!isEdit && (
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Item Name" required placeholder="e.g. Number Balloon" />
-            <Select label="Unit" required>
-              {['pcs', 'packs', 'sets', 'boxes'].map(u => <option key={u}>{u}</option>)}
+            <Input 
+              label="Item Name" 
+              required 
+              value={name} 
+              onChange={e => setName(e.target.value)} 
+              placeholder="e.g. Tarpaulin (2x3 ft)" 
+            />
+            <Select label="Unit" required value={unit} onChange={e => setUnit(e.target.value)}>
+              {['pcs', 'packs', 'sets', 'boxes'].map(u => <option key={u} value={u}>{u}</option>)}
             </Select>
           </div>
         )}
         {isEdit && (
           <div className="grid grid-cols-2 gap-3">
-             <div className="flex flex-col gap-1"><span className="text-[11px] font-bold uppercase text-brand-400">Item Name</span><div className="px-3 py-2 bg-brand-50 border rounded-lg text-sm">{material?.name}</div></div>
-             <div className="flex flex-col gap-1"><span className="text-[11px] font-bold uppercase text-brand-400">Unit</span><div className="px-3 py-2 bg-brand-50 border rounded-lg text-sm">{material?.unit}</div></div>
+             <div className="flex flex-col gap-1">
+               <span className="text-[11px] font-bold uppercase text-brand-400">Item Name</span>
+               <div className="px-3 py-2 bg-brand-50 border rounded-lg text-sm font-bold text-brand-800">{material?.name}</div>
+             </div>
+             <div className="flex flex-col gap-1">
+               <span className="text-[11px] font-bold uppercase text-brand-400">Unit</span>
+               <div className="px-3 py-2 bg-brand-50 border rounded-lg text-sm font-bold text-brand-800">{material?.unit}</div>
+             </div>
           </div>
         )}
         <div className="grid grid-cols-2 gap-4">

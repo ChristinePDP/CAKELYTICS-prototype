@@ -5,6 +5,7 @@ import {
   INGREDIENTS as INIT_INGREDIENTS,
   RECIPES as INIT_RECIPES,
   WASTE_LOGS as INIT_WASTE_LOGS,
+  MATERIALS as INIT_MATERIALS, // <--- DITO IN-IMPORT ANG MATERIALS MULA SA DUMMY DATA
 } from '../data/dummyData';
 
 // ── Service imports (ready for backend connection)
@@ -21,17 +22,7 @@ const nowStr = () => new Date().toLocaleString('en-US', {
   month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit',
 });
 
-// Initial dummy data para sa Celebration Materials
-const INIT_MATERIALS = [
-  { id: 'm1', name: 'Foil Balloon (Numbers 0-9)', unit: 'pcs', stock: 50, min: 10, costPerUnit: 25 },
-  { id: 'm2', name: 'Foil Balloon (Letters A-Z)', unit: 'pcs', stock: 120, min: 20, costPerUnit: 25 },
-  { id: 'm3', name: 'Latex Metallic Balloons (Pack of 50)', unit: 'packs', stock: 15, min: 5, costPerUnit: 120 },
-  { id: 'm4', name: 'Pastel Balloons (Pack of 100)', unit: 'packs', stock: 8, min: 3, costPerUnit: 180 },
-  { id: 'm5', name: 'Tarpaulin (2x3 ft - Generic Layout)', unit: 'pcs', stock: 12, min: 5, costPerUnit: 150 },
-  { id: 'm6', name: 'Tarpaulin (3x4 ft - Customized)', unit: 'pcs', stock: 5, min: 2, costPerUnit: 300 },
-  { id: 'm7', name: 'Number Candle (Assorted)', unit: 'pcs', stock: 80, min: 20, costPerUnit: 15 },
-  { id: 'm8', name: 'Sparkler Candles', unit: 'packs', stock: 25, min: 10, costPerUnit: 45 },
-];
+// TINANGGAL NA YUNG HARDCODED INIT_MATERIALS DITO DAHIL GALING NA SIYA SA DUMMY DATA
 
 export function AppProvider({ children }) {
 
@@ -41,7 +32,7 @@ export function AppProvider({ children }) {
   const [wasteLogs,   setWasteLogs]   = useState(INIT_WASTE_LOGS);
   const [recipes,     setRecipes]     = useState(INIT_RECIPES);
   
-  // BAGONG STATE: Para sa Celebration Materials
+  // BAGONG STATE: Para sa Celebration Materials (binabasa na ang nasa dummyData)
   const [materials,   setMaterials]   = useState(INIT_MATERIALS);
   
   const [loading,     setLoading]     = useState(false);
@@ -191,8 +182,6 @@ export function AppProvider({ children }) {
   }, [recipes]);
 
   // ── Waste Logs ─────────────────────────────────────────────────
-  // TODO (backend): await wasteService.log(wasteData)
-// ── Waste Logs ─────────────────────────────────────────────────
   const logWaste = useCallback((wasteData) => {
     const dt = nowStr();
     

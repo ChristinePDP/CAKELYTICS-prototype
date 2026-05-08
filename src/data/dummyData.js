@@ -75,7 +75,7 @@ export const PRODUCTS = [
     dailyLimit: 5, stock: 10, active: true, dateExceptions: [],
   },
 
-// ── CELEBRATION MATERIALS ────────────────────────────────────
+  // ── CELEBRATION MATERIALS ────────────────────────────────────
   {
     id: 'cm1', name: 'Printed Balloons', category: 'Celebration Material',
     price: 15,
@@ -311,7 +311,7 @@ export const ORDERS = [
   },
 ];
 
-// ─── INVENTORY ───────────────────────────────────────────────
+// ─── RAW INGREDIENTS ─────────────────────────────────────────
 export const INGREDIENTS = [
   { id: 'i1',  name: 'Butter (Unsalted)',  stock: 0.5,  unit: 'kg',  min: 2,    costPerUnit: 280  },
   { id: 'i2',  name: 'Eggs',               stock: 45,   unit: 'pcs', min: 60,   costPerUnit: 8    },
@@ -327,10 +327,16 @@ export const INGREDIENTS = [
   { id: 'i12', name: 'Salt',               stock: 0.8,  unit: 'kg',  min: 0.5,  costPerUnit: 30   },
   { id: 'i13', name: 'Brown Sugar',        stock: 3,    unit: 'kg',  min: 2,    costPerUnit: 65   },
   { id: 'i14', name: 'Strawberry Jam',     stock: 400,  unit: 'g',   min: 800,  costPerUnit: 0.8  },
-  { id: 'i15', name: 'Latex Balloons (Pack of 50)',    unit: 'packs', stock: 15,  min: 5, costPerUnit: 120 },
-  { id: 'i16', name: 'Foil Balloon (Numbers/Letters)',  unit: 'pcs',   stock: 80,  min: 20, costPerUnit: 25 },
-  { id: 'i17', name: 'Tarpaulin (2x3 ft)',              unit: 'pcs',   stock: 12,  min: 5, costPerUnit: 150 },
-  { id: 'i18', name: 'Tarpaulin (3x4 ft - Customized)', unit: 'pcs',   stock: 5,   min: 2, costPerUnit: 300 },
+];
+
+// ─── CELEBRATION MATERIALS (Eksaktong binabasa ng Celebration Tab) ───
+export const MATERIALS = [
+  { id: 'm1', name: 'Printed Balloons (10 inches - Standard)', unit: 'pcs', stock: 150, min: 50, costPerUnit: 5 },
+  { id: 'm2', name: 'Printed Balloons (12 inches - Large)',    unit: 'pcs', stock: 100, min: 50, costPerUnit: 8 },
+  { id: 'm3', name: 'Tarpaulin (2x3 ft)',                      unit: 'pcs', stock: 12,  min: 5,  costPerUnit: 100 },
+  { id: 'm4', name: 'Tarpaulin (3x4 ft)',                      unit: 'pcs', stock: 10,  min: 5,  costPerUnit: 200 },
+  { id: 'm5', name: 'Tarpaulin (4x6 ft)',                      unit: 'pcs', stock: 8,   min: 3,  costPerUnit: 350 },
+  { id: 'm6', name: 'Tarpaulin (5x7 ft)',                      unit: 'pcs', stock: 5,   min: 2,  costPerUnit: 500 },
 ];
 
 export const RECIPES = [
@@ -341,7 +347,8 @@ export const RECIPES = [
       { name: 'Cake Flour', qty: 0.5, unit: 'kg' }, { name: 'White Sugar', qty: 0.4, unit: 'kg' },
       { name: 'Butter (Unsalted)', qty: 0.3, unit: 'kg' }, { name: 'Eggs', qty: 8, unit: 'pcs' },
       { name: 'Baking Powder', qty: 0.015, unit: 'kg' }, { name: 'Vanilla Extract', qty: 0.01, unit: 'L' },
-      { name: 'Fresh Milk', qty: 0.2, unit: 'L' }, { name: 'Latex Balloons (Pack of 50)', qty: 0.1, unit: 'packs' },
+      { name: 'Fresh Milk', qty: 0.2, unit: 'L' }, 
+      { name: 'Printed Balloons (10 inches - Standard)', qty: 5, unit: 'pcs' },
     ],
   },
   {
@@ -360,7 +367,7 @@ export const RECIPES = [
       { name: 'Butter (Unsalted)', qty: 0.4, unit: 'kg' }, { name: 'Eggs', qty: 11, unit: 'pcs' },
       { name: 'Baking Powder', qty: 0.02, unit: 'kg' }, { name: 'Vanilla Extract', qty: 0.015, unit: 'L' },
       { name: 'Fresh Milk', qty: 0.3, unit: 'L' }, { name: 'All-Purpose Flour', qty: 0.12, unit: 'kg' },
-      { name: 'Latex Balloons (Pack of 50)', qty: 0.1, unit: 'packs' },
+      { name: 'Printed Balloons (10 inches - Standard)', qty: 5, unit: 'pcs' },
     ],
   },
   {
@@ -369,8 +376,9 @@ export const RECIPES = [
       { name: 'Cake Flour', qty: 0.5, unit: 'kg' }, { name: 'White Sugar', qty: 0.4, unit: 'kg' },
       { name: 'Butter (Unsalted)', qty: 0.3, unit: 'kg' }, { name: 'Eggs', qty: 8, unit: 'pcs' },
       { name: 'Baking Powder', qty: 0.015, unit: 'kg' }, { name: 'Vanilla Extract', qty: 0.01, unit: 'L' },
-      { name: 'Fresh Milk', qty: 0.2, unit: 'L' }, { name: 'Latex Balloons (Pack of 50)', qty: 0.1, unit: 'packs' },
-      { name: 'Tarpaulin (3x4 ft - Customized)', qty: 1, unit: 'pcs' },
+      { name: 'Fresh Milk', qty: 0.2, unit: 'L' }, 
+      { name: 'Printed Balloons (10 inches - Standard)', qty: 5, unit: 'pcs' },
+      { name: 'Tarpaulin (5x7 ft)', qty: 1, unit: 'pcs' }, 
     ],
   },
   {
@@ -389,7 +397,7 @@ export const RECIPES = [
       { name: 'Butter (Unsalted)', qty: 0.5, unit: 'kg' }, { name: 'Eggs', qty: 14, unit: 'pcs' },
       { name: 'Baking Powder', qty: 0.025, unit: 'kg' }, { name: 'Vanilla Extract', qty: 0.015, unit: 'L' },
       { name: 'Fresh Milk', qty: 0.4, unit: 'L' }, { name: 'All-Purpose Flour', qty: 0.24, unit: 'kg' },
-      { name: 'Latex Balloons (Pack of 50)', qty: 0.2, unit: 'packs' },
+      { name: 'Printed Balloons (10 inches - Standard)', qty: 10, unit: 'pcs' },
     ],
   },
   {
