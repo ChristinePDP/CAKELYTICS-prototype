@@ -1,52 +1,31 @@
-// ============================================================
-// CUSTOMER MENU PAGE — Bigger fonts, styled Customize badge
-// ============================================================
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CustomerHeader, CustomerFooter } from './CustomerLayout';
 import ProductModal from './ProductModal';
-import { PRODUCTS, CATEGORIES } from '../../data/dummyData';
+import { PRODUCTS } from '../../data/dummyData';
 
+const CATEGORY_ORDER = ['Pastry', 'Package', 'Celebration Material'];
+
+// ─── PASTRY CARD ─────────────────────────────────────────────
 function PastryCard({ product, onAddToCart }) {
   const outOfStock = product.stock === 0;
-
   return (
     <div className={`flex flex-col ${outOfStock ? 'opacity-60' : ''}`}>
       <div className="relative w-full aspect-square overflow-hidden rounded-lg mb-3 shadow-md border border-[#EAE4E0]">
-        <img
-          src={product.image}
-          alt={product.name}
-          className="w-full h-full object-cover"
-          onError={e => { e.target.src = 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500&q=80'; }}
-        />
+        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
         {outOfStock && (
           <div className="absolute inset-0 bg-[#4A3B36]/60 flex items-center justify-center">
             <span className="text-white text-xs font-bold tracking-widest uppercase">Out of Stock</span>
           </div>
         )}
       </div>
-
       <div className="flex flex-col flex-grow">
         <div className="text-[13px] font-black tracking-widest uppercase text-[#4A3B36] mb-1 leading-snug">{product.name}</div>
-
-        {product.inclusion && (
-          <ul className="list-none p-0 m-0 mb-2 space-y-0.5">
-            {product.inclusion.split('\n').map((item, idx) => (
-              <li key={idx} className="flex items-start gap-1 text-[12px] text-[#9E8F88]">
-                <span className="text-[#C4B5AE] shrink-0">•</span>
-                <span className="line-clamp-1">{item}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-
         {!outOfStock ? (
           <div className="flex items-center justify-between mt-auto pt-1 gap-2">
             <div className="text-[13px] text-[#5A453C] font-extrabold">₱{product.price.toLocaleString()}</div>
-            <button
-              onClick={() => onAddToCart({ ...product, qty: 1, note: '', file: '' })}
-              className="bg-[#5A453C] text-white px-3 py-1 border-none rounded-md text-[11px] font-bold tracking-wide uppercase cursor-pointer hover:bg-[#4A3B36] shrink-0"
-            >
+            <button onClick={() => onAddToCart({ ...product, qty: 1, note: '', file: '' })}
+              className="bg-[#5A453C] text-white px-3 py-1 border-none rounded-md text-[11px] font-bold tracking-wide uppercase cursor-pointer hover:bg-[#4A3B36]">
               Add to Cart
             </button>
           </div>
@@ -58,77 +37,268 @@ function PastryCard({ product, onAddToCart }) {
   );
 }
 
-function CartSidebar({ cart, onQtyChange, onClear, onCheckout, cartRef }) {
-  const totalAmount = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const hasItems = cart.length > 0;
-  const hasPackage = cart.some(i => i.category === 'Package'); // ← BAGO
-
+// ─── PACKAGE CARD ─────────────────────────────────────────────
+function PackageCard({ product, onOpen }) {
+  const outOfStock = product.stock === 0;
   return (
-    <aside className="bg-white border border-[#EAE4E0] rounded-2xl shadow-sm sticky top-[200px] flex flex-col h-fit max-h-[calc(100vh-220px)] z-10 overflow-hidden" ref={cartRef}>
-      <div className="flex justify-between items-center border-b border-[#EAE4E0] px-6 py-5 shrink-0 bg-white">
-        <h3 className="text-xl font-black text-[#5A453C]">Your Cart</h3>
-        {hasItems && <button className="bg-none border-none text-[13px] text-red-500 font-bold cursor-pointer hover:opacity-70" onClick={onClear}>Clear All</button>}
+    <div className={`flex flex-col ${outOfStock ? 'opacity-60' : ''}`}>
+      <div className="relative w-full aspect-square overflow-hidden rounded-lg mb-3 shadow-md border border-[#EAE4E0]">
+        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+        <span className="absolute top-2 left-2 bg-[#5A453C]/90 text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">Pre-Order</span>
+        {outOfStock && (
+          <div className="absolute inset-0 bg-[#4A3B36]/60 flex items-center justify-center">
+            <span className="text-white text-xs font-bold tracking-widest uppercase">Out of Stock</span>
+          </div>
+        )}
       </div>
-
-      {!hasItems ? (
-        <div className="flex-grow flex flex-col items-center justify-center text-[#9E8F88] font-medium py-12 px-6">
-          <svg fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"
-            style={{ width: 64, height: 64, opacity: 0.2, marginBottom: 12, color: '#5A453C' }}>
-            <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-          </svg>
-          <p className="text-center">Your cart is empty.<br />Add items from the menu.</p>
-        </div>
-      ) : (
-        <>
-          <div className="flex-grow overflow-y-auto px-6 py-2 custom-scrollbar min-h-0 bg-white">
-            {cart.map((item, index) => (
-              <div key={index} className="flex justify-between items-center py-4 border-b border-[#EAE4E0] gap-3 last:border-b-0">
-                <div className="flex-grow">
-                  <div className="text-[15px] font-bold text-[#5A453C] mb-0.5">{item.name}</div>
-                  <div className="text-[13px] text-[#9E8F88] font-bold">₱{(item.price * item.qty).toLocaleString()}</div>
-                  {item.note && <div className="text-[11px] text-[#9E8F88] italic font-medium mt-1">📝 {item.note}</div>}
-                  {item.file && <div className="text-[11px] text-[#9E8F88] italic font-medium">📎 {item.file}</div>}
-                </div>
-                <div className="flex items-center gap-1.5 border border-[#EAE4E0] rounded-xl px-2 py-1.5 bg-white shrink-0 shadow-sm">
-                  <button onClick={() => onQtyChange(index, -1)} className="bg-none border-none cursor-pointer font-black w-6 h-6 flex items-center justify-center text-[#5A453C] text-lg hover:text-black">−</button>
-                  <span className="font-bold text-[14px] text-[#5A453C] w-5 text-center">{item.qty}</span>
-                  <button onClick={() => onQtyChange(index, 1)} className="bg-none border-none cursor-pointer font-black w-6 h-6 flex items-center justify-center text-[#5A453C] text-lg hover:text-black">+</button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="shrink-0 bg-[#FCFAF9] p-6 border-t border-[#EAE4E0]">
-            {/* ── BAGO: Package reminder ── */}
-            {hasPackage && (
-  <div className="bg-[#FFF8E7] border border-[#F3D79A] text-[#8C6B22] px-3 py-2.5 rounded-lg mb-4 text-[11px] font-semibold flex items-start gap-2 leading-relaxed">
-    ⚠️ May Package sa iyong order — Pre-Order required (2 days prep). Hindi pwede ang Order Now.
-  </div>
-)}
-
-            <div className="flex justify-between text-[14px] mb-2 text-[#9E8F88] font-semibold">
-              <span>Subtotal</span><span>₱{totalAmount.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-lg font-black text-[#5A453C] border-t border-[#EAE4E0] pt-3 mt-1">
-              <span>Total</span><span>₱{totalAmount.toLocaleString()}</span>
-            </div>
-            <button className="w-full mt-5 bg-[#5A453C] text-white py-3.5 border-none cursor-pointer font-bold text-[15px] rounded-lg hover:bg-[#4A3B36] shadow-md" onClick={onCheckout}>
-              Proceed to Checkout
+      <div className="flex flex-col flex-grow">
+        <div className="text-[13px] font-black tracking-widest uppercase text-[#4A3B36] mb-1 leading-snug">{product.name}</div>
+        <div className="flex items-center justify-between mt-auto pt-1 gap-2">
+          <div className="text-[13px] text-[#5A453C] font-bold">₱{product.price.toLocaleString()}</div>
+          {!outOfStock && (
+            <button onClick={() => onOpen(product)}
+              className="bg-[#5A453C] text-white text-[11px] font-bold tracking-wide uppercase px-4 py-1.5 rounded-md border-none cursor-pointer hover:bg-[#4A3B36]">
+              Add to Cart
             </button>
-          </div>
-        </>
-      )}
-    </aside>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
+// ─── CELEBRATION MATERIAL CARD ────────────────────────────────
+function CelebrationCard({ product, onOpen }) {
+  const outOfStock = product.stock === 0;
+  return (
+    <div className={`flex flex-col ${outOfStock ? 'opacity-60' : ''}`}>
+      <div className="relative w-full aspect-square overflow-hidden rounded-lg mb-3 shadow-md border border-[#EAE4E0]">
+        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+        <span className="absolute top-2 left-2 bg-[#5A453C]/90 text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">Pre-Order</span>
+        {outOfStock && (
+          <div className="absolute inset-0 bg-[#4A3B36]/60 flex items-center justify-center">
+            <span className="text-white text-xs font-bold tracking-widest uppercase">Out of Stock</span>
+          </div>
+        )}
+      </div>
+      <div className="flex flex-col flex-grow">
+        <div className="text-[13px] font-black tracking-widest uppercase text-[#4A3B36] mb-1 leading-snug">{product.name}</div>
+        <div className="flex items-center justify-between mt-auto pt-1 gap-2">
+          <div className="text-[13px] text-[#5A453C] font-extrabold">₱{product.price.toLocaleString()}</div>
+          {!outOfStock && (
+            <button onClick={() => onOpen(product)}
+              className="bg-[#5A453C] text-white px-3 py-1 border-none rounded-md text-[11px] font-bold tracking-wide uppercase cursor-pointer hover:bg-[#4A3B36]">
+              Add to Cart
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── CELEBRATION SLIP MODAL ───────────────────────────────────
+function CelebrationSlipModal({ product, onClose, onConfirm }) {
+  const isTarp = product.name.toLowerCase().includes('tarpaulin');
+  const hasVariants = product.variants && product.variants.length > 0;
+
+  const [qty, setQty] = useState(1);
+  const [selectedVariant, setSelectedVariant] = useState(hasVariants ? product.variants[0] : null);
+  
+  // Tarp States
+  const [tarpNote, setTarpNote] = useState('');
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+
+  // Balloon States
+  const [balloonSize, setBalloonSize] = useState('10 inches (Standard)');
+  const [colorType, setColorType] = useState('Assorted Colors');
+  const [specificColors, setSpecificColors] = useState('');
+  const [printRequest, setPrintRequest] = useState('');
+
+  const basePrice = selectedVariant ? selectedVariant.price : product.price;
+  const totalPrice = isTarp ? basePrice : basePrice * qty;
+
+  const handleFileChange = (e) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      // I-extract muna yung files papuntang Array bago mag-update ng state
+      const newFiles = Array.from(files);
+      setUploadedFiles(prev => [...prev, ...newFiles]);
+    }
+    // I-reset ang input value para ma-trigger uli ang onChange kahit same file ang i-upload
+    e.target.value = '';
+  };
+
+  const removeFile = (indexToRemove) => {
+    setUploadedFiles(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const handleConfirm = () => {
+    let note = '';
+    let filesStr = '';
+
+    if (isTarp) {
+      note = `Size: ${selectedVariant.label}${tarpNote ? ' | Instructions: ' + tarpNote : ''}`;
+      if (uploadedFiles.length > 0) {
+        filesStr = uploadedFiles.map(f => f.name).join(', ');
+      }
+    } else {
+      const colorVal = colorType === 'Specific Color(s)' ? specificColors : 'Assorted Colors';
+      note = `Size: ${balloonSize} | Color: ${colorVal}${printRequest ? ' | Print: ' + printRequest : ''}`;
+    }
+
+    onConfirm({ 
+      ...product, 
+      price: basePrice, 
+      qty: isTarp ? 1 : qty, 
+      note, 
+      file: filesStr 
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-[rgba(90,69,60,0.55)] z-[2000] flex items-center justify-center p-4">
+      <div className="bg-white w-full max-w-[420px] rounded-3xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
+        
+        {/* Header */}
+        <div className="px-7 pt-7 pb-4 border-b border-[#EAE4E0] flex justify-between shrink-0">
+          <div>
+            <p className="text-[11px] font-black text-[#9E8F88] uppercase tracking-widest">Order Slip</p>
+            <h2 className="text-[20px] font-black text-[#4A3B36]">{product.name}</h2>
+          </div>
+          <button onClick={onClose} className="bg-[#F5EFEB] border-none w-8 h-8 rounded-full cursor-pointer text-[#5A453C] flex items-center justify-center font-black">✕</button>
+        </div>
+
+        {/* Content Form */}
+        <div className="flex-1 overflow-y-auto px-7 py-5 space-y-5">
+          
+          {/* Kung Tarpaulin */}
+          {isTarp ? (
+            <>
+              <div>
+                <label className="text-[13px] font-bold text-[#5A453C] mb-2 block">Select Size</label>
+                <select 
+                  className="w-full px-4 py-2.5 border border-[#EAE4E0] rounded-lg text-[13px] bg-white outline-none focus:border-[#5A453C]"
+                  value={selectedVariant?.label}
+                  onChange={(e) => setSelectedVariant(product.variants.find(v => v.label === e.target.value))}
+                >
+                  {product.variants.map(v => <option key={v.label} value={v.label}>{v.label} — ₱{v.price}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[13px] font-bold text-[#5A453C] mb-2 block">Upload Photos for Layout</label>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-3 mb-2">
+                    <label className="flex items-center gap-2 px-4 py-2 bg-[#F5EFEB] text-[#5A453C] border border-[#D6C5BE] rounded-lg cursor-pointer hover:bg-[#EAE4E0] transition-colors">
+                      <span className="text-[12px] font-bold">Choose Files</span>
+                      <input type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
+                    </label>
+                    <span className="text-[12px] text-[#9E8F88]">
+                      {uploadedFiles.length === 0 ? 'No file chosen' : `${uploadedFiles.length} file(s) selected`}
+                    </span>
+                  </div>
+                  
+                  {/* Filename List Display */}
+                  {uploadedFiles.length > 0 && (
+                    <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto pr-1">
+                      {uploadedFiles.map((f, i) => (
+                        <div key={i} className="flex items-center justify-between bg-[#FCFAF9] px-3 py-2.5 rounded-lg border border-[#EAE4E0]">
+                          <div className="flex items-center gap-2 truncate pr-2">
+                            <span className="shrink-0 text-[#C4B5AE]">📎</span>
+                            <span className="text-[12px] font-medium text-[#796860] truncate">{f.name}</span>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => removeFile(i)}
+                            className="text-[#9E8F88] hover:text-red-500 font-bold shrink-0 text-[14px] px-1 border-none bg-transparent cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[13px] font-bold text-[#5A453C] mb-2 block">Layout Instructions</label>
+                <textarea className="w-full px-4 py-3 border border-[#EAE4E0] rounded-lg text-[13px] resize-none outline-none focus:border-[#5A453C]" rows={3} 
+                  placeholder="e.g. Happy 1st Birthday AJ, Blue Theme" value={tarpNote} onChange={e => setTarpNote(e.target.value)} />
+              </div>
+            </>
+          ) : (
+            /* Kung Balloons */
+            <>
+              <div>
+                <label className="text-[13px] font-bold text-[#5A453C] mb-2 block">Quantity</label>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-9 h-9 rounded-lg border border-[#EAE4E0] bg-white font-black text-[#5A453C] hover:bg-[#F5EFEB] flex items-center justify-center">−</button>
+                  <span className="text-[18px] font-black text-[#4A3B36] w-8 text-center">{qty}</span>
+                  <button onClick={() => setQty(q => q + 1)} className="w-9 h-9 rounded-lg border border-[#EAE4E0] bg-white font-black text-[#5A453C] hover:bg-[#F5EFEB] flex items-center justify-center">+</button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[13px] font-bold text-[#5A453C] mb-2 block">Size</label>
+                  <select 
+                    className="w-full px-3 py-2.5 border border-[#EAE4E0] rounded-lg text-[13px] bg-white outline-none focus:border-[#5A453C]"
+                    value={balloonSize} onChange={e => setBalloonSize(e.target.value)}
+                  >
+                    <option value="10 inches (Standard)">10" (Standard)</option>
+                    <option value="12 inches (Large)">12" (Large)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[13px] font-bold text-[#5A453C] mb-2 block">Color Set</label>
+                  <select 
+                    className="w-full px-3 py-2.5 border border-[#EAE4E0] rounded-lg text-[13px] bg-white outline-none focus:border-[#5A453C]"
+                    value={colorType} onChange={e => setColorType(e.target.value)}
+                  >
+                    <option value="Assorted Colors">Assorted</option>
+                    <option value="Specific Color(s)">Specific Color</option>
+                  </select>
+                </div>
+              </div>
+
+              {colorType === 'Specific Color(s)' && (
+                <div>
+                  <label className="text-[13px] font-bold text-[#5A453C] mb-2 block">Specify Color(s)</label>
+                  <input type="text" className="w-full px-4 py-2 border border-[#EAE4E0] rounded-lg text-[13px] outline-none focus:border-[#5A453C]"
+                    placeholder="e.g. Red and White only" value={specificColors} onChange={e => setSpecificColors(e.target.value)} />
+                </div>
+              )}
+
+              <div>
+                <label className="text-[13px] font-bold text-[#5A453C] mb-2 block">Print Details</label>
+                <input type="text" className="w-full px-4 py-2.5 border border-[#EAE4E0] rounded-lg text-[13px] bg-white outline-none focus:border-[#5A453C]"
+                  placeholder="e.g. Happy Birthday, I Love You, etc." value={printRequest} onChange={e => setPrintRequest(e.target.value)} />
+              </div>
+            </>
+          )}
+
+        </div>
+
+        {/* Footer */}
+        <div className="px-7 py-5 border-t border-[#EAE4E0] bg-white shrink-0">
+          <button onClick={handleConfirm} className="w-full bg-[#5A453C] text-white py-3.5 rounded-full font-bold text-[14px] hover:bg-[#4A3B36] transition-colors border-none cursor-pointer">
+            Add to Cart — ₱{totalPrice.toLocaleString()}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN CUSTOMER MENU ───────────────────────────────────────
 export default function CustomerMenu({ cart, setCart }) {
   const navigate = useNavigate();
-  const cartRef  = useRef(null);
-  const [modal, setModal] = useState(null);
-
-  const totalItems  = cart.reduce((s, i) => s + i.qty, 0);
-  const totalAmount = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const [activeTab, setActiveTab] = useState('All');
+  const [modal, setModal] = useState(null); 
+  const [celebModal, setCelebModal] = useState(null); 
 
   const addToCart = (item) => {
     setCart(prev => {
@@ -142,102 +312,84 @@ export default function CustomerMenu({ cart, setCart }) {
     });
   };
 
-  const changeQty = (index, delta) => {
-    setCart(prev => prev.map((item, i) => i === index ? { ...item, qty: item.qty + delta } : item).filter(i => i.qty > 0));
-  };
-
   return (
-    <>
-      <style>{`
-        ::-webkit-scrollbar { display: none; }
-        html, body { -ms-overflow-style: none; scrollbar-width: none; }
-        .custom-scrollbar::-webkit-scrollbar { display: block; width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #EAE4E0; border-radius: 4px; }
-      `}</style>
+    <div className="bg-[#FCFAF9] min-h-screen">
+      <CustomerHeader page="menu" cartCount={cart.reduce((s, i) => s + i.qty, 0)} />
 
-      <div className="font-sans bg-[#FCFAF9] text-[#4A3B36] leading-relaxed min-h-screen antialiased">
-        <CustomerHeader page="menu" cartCount={totalItems} cartTotal={totalAmount} onCartClick={() => cartRef.current?.scrollIntoView({ behavior: 'smooth' })} />
+      {/* ── Category Filter ── */}
+      <div className="sticky top-[80px] z-50 bg-white border-b border-[#EAE4E0] py-4">
+        <div className="max-w-[1400px] mx-auto px-6 flex gap-2 overflow-x-auto no-scrollbar">
+          {['All', ...CATEGORY_ORDER].map(cat => (
+            <button key={cat} onClick={() => setActiveTab(cat)}
+              className={`px-6 py-2 rounded-full text-[12px] font-black uppercase tracking-widest whitespace-nowrap transition-all border-none cursor-pointer
+                ${activeTab === cat ? 'bg-[#5A453C] text-white' : 'bg-[#F5EFEB] text-[#9E8F88] hover:bg-[#EAE4E0]'}`}>
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <div className="max-w-[1400px] mx-auto my-8 px-6 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8 items-start relative">
-          <div>
-            <div className="mb-6">
-              <h2 className="text-3xl font-black text-[#5A453C]">Our Menu</h2>
-            </div>
+      <div className="max-w-[1400px] mx-auto py-10 px-6 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-10">
+        
+        {/* ── Products List ── */}
+        <div className="space-y-12">
+          {CATEGORY_ORDER.map(cat => {
+            if (activeTab !== 'All' && activeTab !== cat) return null;
+            const items = PRODUCTS.filter(p => p.category === cat && p.active);
+            if (!items.length) return null;
 
-            {CATEGORIES.filter(c => c !== 'All').map(cat => {
-              const items = PRODUCTS.filter(p => p.category === cat && p.active);
-              if (!items.length) return null;
-
-              return (
-                <div key={cat} className="mb-10">
-                  <div className="text-xs font-black tracking-[0.1em] uppercase text-[#9E8F88] mb-4 border-b-2 border-[#EAE4E0] pb-2">{cat}</div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-5 gap-y-8">
-                    {items.map(p => {
-                      const isPackage = p.category === 'Package';
-                      const outOfStock = p.stock === 0;
-
-                      if (!isPackage) {
-                        return <PastryCard key={p.id} product={p} onAddToCart={addToCart} />;
-                      }
-
-                      // Package card
-                      return (
-                        <div
-                          key={p.id}
-                          className={`flex flex-col ${outOfStock ? 'opacity-60' : ''}`}
-                        >
-                          <div className="relative w-full aspect-square overflow-hidden rounded-lg mb-3 shadow-md border border-[#EAE4E0]">
-                            <img src={p.image} alt={p.name} className="w-full h-full object-cover" loading="lazy"
-                              onError={e => { e.target.src = 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500&q=80'; }} />
-                            {outOfStock && (
-                              <div className="absolute inset-0 bg-[#4A3B36]/60 flex items-center justify-center">
-                                <span className="text-white text-xs font-bold tracking-widest uppercase">Out of Stock</span>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex flex-col flex-grow">
-                            <div className="text-[13px] font-black tracking-widest uppercase text-[#4A3B36] mb-1 leading-snug">{p.name}</div>
-
-                            {p.inclusion && (
-                              <ul className="list-none p-0 m-0 mb-2 space-y-0.5">
-                                {p.inclusion.split('\n').map((item, idx) => (
-                                  <li key={idx} className="flex items-start gap-1 text-[12px] text-[#9E8F88]">
-                                    <span className="text-[#C4B5AE] shrink-0">•</span>
-                                    <span className="line-clamp-1">{item}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-
-                            <div className="flex items-center justify-between mt-auto pt-1 gap-2">
-                              <div className="text-[13px] text-[#5A453C] font-bold">₱{p.price.toLocaleString()}</div>
-                              {!outOfStock && (
-                                <button
-                                  onClick={() => setModal(p)}
-                                  className="bg-[#5A453C] text-white text-[11px] font-bold tracking-wide uppercase px-4 py-1.5 rounded-md shrink-0 border-none cursor-pointer hover:bg-[#4A3B36]"
-                                >
-                                  Add to Cart
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+            return (
+              <section key={cat}>
+                <div className="border-b-2 border-[#EAE4E0] pb-2 mb-6">
+                  <h2 className="text-[14px] font-black uppercase tracking-widest text-[#9E8F88]">{cat}</h2>
                 </div>
-              );
-            })}
-          </div>
-
-          <CartSidebar cart={cart} onQtyChange={changeQty} onClear={() => setCart([])} onCheckout={() => navigate('/customer/checkout')} cartRef={cartRef} />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  {items.map(p => {
+                    if (p.category === 'Pastry') return <PastryCard key={p.id} product={p} onAddToCart={addToCart} />;
+                    if (p.category === 'Package') return <PackageCard key={p.id} product={p} onOpen={setModal} />;
+                    return <CelebrationCard key={p.id} product={p} onOpen={setCelebModal} />;
+                  })}
+                </div>
+              </section>
+            );
+          })}
         </div>
 
-        {modal && <ProductModal product={modal} onClose={() => setModal(null)} onAddToCart={addToCart} />}
-        <CustomerFooter />
+        {/* ── Sidebar Cart ── */}
+        <div className="bg-white p-8 rounded-3xl border border-[#EAE4E0] h-fit sticky top-[160px]">
+          <h3 className="text-xl font-black text-[#4A3B36] mb-6">Your Cart</h3>
+          {cart.length === 0 ? (
+            <p className="text-[#9E8F88] text-[14px]">Your cart is empty. Add items from the menu.</p>
+          ) : (
+            <>
+              <div className="space-y-4 mb-6">
+                {cart.slice(0, 5).map((item, i) => (
+                  <div key={i} className="flex justify-between text-[14px]">
+                    <div className="flex-1 pr-4">
+                      <span className="font-bold text-[#5A453C]">{item.qty}x {item.name}</span>
+                      {item.note && <p className="text-[11px] text-[#9E8F88] leading-snug mt-0.5 line-clamp-1">📝 {item.note}</p>}
+                      {item.file && <p className="text-[11px] text-[#8C6B22] leading-snug mt-0.5 line-clamp-1">📎 {item.file}</p>}
+                    </div>
+                    <span className="font-bold text-[#4A3B36]">₱{(item.price * item.qty).toLocaleString()}</span>
+                  </div>
+                ))}
+                {cart.length > 5 && <div className="text-[12px] text-[#9E8F88] italic">+ {cart.length - 5} more items</div>}
+              </div>
+              <div className="border-t border-[#EAE4E0] pt-4 mb-6 flex justify-between font-black text-[16px] text-[#4A3B36]">
+                <span>Total</span>
+                <span>₱{cart.reduce((s, i) => s + i.price * i.qty, 0).toLocaleString()}</span>
+              </div>
+              <button onClick={() => navigate('/customer/checkout')} className="w-full bg-[#5A453C] text-white py-3.5 rounded-xl font-black text-[14px] uppercase tracking-wider hover:bg-[#4A3B36] transition-colors border-none cursor-pointer">
+                Checkout Now
+              </button>
+            </>
+          )}
+        </div>
       </div>
-    </>
+
+      {modal && <ProductModal product={modal} onClose={() => setModal(null)} onAddToCart={addToCart} />}
+      {celebModal && <CelebrationSlipModal product={celebModal} onClose={() => setCelebModal(null)} onConfirm={addToCart} />}
+      <CustomerFooter />
+    </div>
   );
 }

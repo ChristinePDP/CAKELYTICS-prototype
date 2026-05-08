@@ -28,7 +28,7 @@ import sansRivalImg from '../assets/images/product/sansrival.png';
 import ubeCakeImg from '../assets/images/product/ubecake.png';
 import yemaCakeImg from '../assets/images/product/yemacake.png';
 
-export const CATEGORIES = ['All', 'Package', 'Pastry'];
+export const CATEGORIES = ['All', 'Package', 'Pastry', 'Celebration Material'];
 
 export const PRODUCTS = [
   // ── PACKAGES ────────────────────────────────────────────────
@@ -73,6 +73,28 @@ export const PRODUCTS = [
     inclusion: '12 pcs Cupcakes',
     image: 'https://images.unsplash.com/photo-1519869325930-281384150729?w=400&q=80',
     dailyLimit: 5, stock: 10, active: true, dateExceptions: [],
+  },
+
+// ── CELEBRATION MATERIALS ────────────────────────────────────
+  {
+    id: 'cm1', name: 'Printed Balloons', category: 'Celebration Material',
+    price: 15,
+    inclusion: 'Round balloons with print (e.g., Happy Birthday) · Per piece',
+    image: 'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=400&q=80',
+    dailyLimit: 0, stock: 100, active: true, dateExceptions: [],
+  },
+  {
+    id: 'cm2', name: 'Tarpaulin', category: 'Celebration Material',
+    price: 150,
+    inclusion: 'Customized design · Choose your size below',
+    image: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=400&q=80',
+    dailyLimit: 0, stock: 20, active: true, dateExceptions: [],
+    variants: [
+      { label: '2×3 ft', price: 150 },
+      { label: '3×4 ft', price: 300 },
+      { label: '4×6 ft', price: 500 },
+      { label: '5×7 ft', price: 700 },
+    ],
   },
 
   // ── PASTRY ───────────────────────────────────────────────────

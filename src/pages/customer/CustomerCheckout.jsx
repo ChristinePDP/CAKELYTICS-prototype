@@ -9,11 +9,11 @@ import { generateCustomerOrderId } from '../../data/customerData';
 export default function CustomerCheckout({ cart, setCart, setConfirmedOrderId }) {
   const navigate = useNavigate();
 
-  const hasPackage = cart.some(item => item.category === 'Package');
-  const [pickupType, setPickupType] = useState(hasPackage ? 'later' : 'now');
+  // BINAGO: Parehong Package at Celebration Material ang bawal sa Pick up Now
+  const hasPreOrderOnly = cart.some(item => item.category === 'Package' || item.category === 'Celebration Material');
+  const [pickupType, setPickupType] = useState(hasPreOrderOnly ? 'later' : 'now');
   const [payType, setPayType]       = useState('half');
 
-  // Tinanggal na ang fb sa state
   const [form, setForm] = useState({
     name: '', phone: '', altPhone: '', date: '', time: '10:00',
   });
@@ -34,7 +34,6 @@ export default function CustomerCheckout({ cart, setCart, setConfirmedOrderId })
   const set = (field, val) => setForm(prev => ({ ...prev, [field]: val }));
 
   const handlePlaceOrder = () => {
-    // Tinanggal na ang validation para sa fb
     if (!form.name || !form.phone) {
       alert('Please enter your Full Name and Contact Number.');
       return;
@@ -68,9 +67,9 @@ export default function CustomerCheckout({ cart, setCart, setConfirmedOrderId })
           {/* Order type toggle */}
           <div className="flex bg-[#F5EFEB] p-1 rounded-lg mb-4 border border-[#D6C5BE] gap-1">
             <button
-              onClick={() => !hasPackage && setPickupType('now')}
-              title={hasPackage ? 'Hindi available ang Pick up Now para sa mga Package item.' : ''}
-              className={`flex-1 py-2 text-[13px] font-bold rounded-md transition-all border-none ${hasPackage ? 'opacity-40 cursor-not-allowed text-[#796860]' : 'cursor-pointer'} ${pickupType === 'now' ? 'bg-[#5A453C] text-white shadow-sm' : 'bg-transparent text-[#796860] hover:bg-[#EAE4E0]/50'}`}
+              onClick={() => !hasPreOrderOnly && setPickupType('now')}
+              title={hasPreOrderOnly ? 'Hindi available ang Pick up Now para sa mga Package at Celebration Material.' : ''}
+              className={`flex-1 py-2 text-[13px] font-bold rounded-md transition-all border-none ${hasPreOrderOnly ? 'opacity-40 cursor-not-allowed text-[#796860]' : 'cursor-pointer'} ${pickupType === 'now' ? 'bg-[#5A453C] text-white shadow-sm' : 'bg-transparent text-[#796860] hover:bg-[#EAE4E0]/50'}`}
             >
               Pick up Now
             </button>
@@ -82,10 +81,10 @@ export default function CustomerCheckout({ cart, setCart, setConfirmedOrderId })
             </button>
           </div>
 
-          {/* Warning — show always if has package so customer knows why Pick up Now is locked */}
-          {hasPackage && (
+          {/* Warning — ipapakita kapag may pre-order items para alam ng customer bakit disabled ang Pick up Now */}
+          {hasPreOrderOnly && (
             <div className="bg-[#FFF8E7] border border-[#F3D79A] text-[#8C6B22] px-3 py-2.5 rounded-lg mb-4 text-[12px] font-semibold flex items-center gap-2">
-              ⚠️ Ang iyong order ay may kasamang Package — kailangan ng Pre-Order (2 days preparation).
+              ⚠️ Ang iyong order ay may kasamang Package o Celebration Material — kailangan ng Pre-Order (2 days preparation).
             </div>
           )}
 

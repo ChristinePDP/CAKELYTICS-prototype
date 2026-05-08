@@ -21,26 +21,24 @@ function verifyReceiptToken(orderId, token) {
   return generateReceiptToken(orderId) === token;
 }
 
-// ─── SCAN RESULT MODAL ────────────────────────────────────────
 function ScanResultModal({ order, isOpen, onClose, onStatusChange, tokenValid }) {
   if (!order) return null;
+  const navigate = useNavigate();
 
   function fmt(n) {
-    return '₱' + Number(n).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return '₱' + Number(n || 0).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   if (!tokenValid) {
     return (
       <Modal isOpen={isOpen} onClose={onClose} size="md" title="⚠️ Invalid QR Code">
-        <div className="p-6 text-center">
-          <div className="mb-4 text-5xl">🔴</div>
-          <p className="text-red-700 font-black text-lg mb-2">Invalid or Unauthorized QR Code</p>
-          <p className="text-slate-600 text-sm mb-6">This QR code cannot be verified. It may have been tampered with or is invalid.</p>
-          <Button
-            variant="primary"
-            onClick={onClose}
-            className="w-full bg-red-600 text-white font-black py-3 rounded-lg hover:bg-red-700"
-          >
+        <div className="flex flex-col items-center text-center px-4 py-6 gap-4">
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-3xl">🔴</div>
+          <div>
+            <p className="text-red-700 font-black text-base mb-1">Invalid or Unauthorized QR Code</p>
+            <p className="text-slate-500 text-sm">This QR code cannot be verified. It may have been tampered with or is not from this system.</p>
+          </div>
+          <Button onClick={onClose} className="w-full bg-red-600 text-white font-black py-3 rounded-xl hover:bg-red-700">
             Close & Try Again
           </Button>
         </div>
@@ -48,79 +46,156 @@ function ScanResultModal({ order, isOpen, onClose, onStatusChange, tokenValid })
     );
   }
 
+  const items = order.items || [];
+  const grandTotal = order.grandTotal || 0;
+  const subtotal = order.subtotal || grandTotal;
+  const customerName = order.customer?.name || 'Walk-in';
+  const paymentType = order.paymentType;
+  const amountPaid = order.amountPaid || 0;
+  const balance = order.balance || 0;
+  const pickupDate = order.pickupDate || null;
+  const pickupTime = order.pickupTime || '';
+
+  const statusConfig = {
+    Confirmed: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', dot: 'bg-blue-500' },
+    Ready:     { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', dot: 'bg-amber-500' },
+    Completed: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-800', dot: 'bg-green-500' },
+    Cancelled: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', dot: 'bg-red-500' },
+  };
+  const sc = statusConfig[order.status] || statusConfig.Confirmed;
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       size="md"
       title={
-        <div className="flex items-center gap-3">
-          <span className="font-black text-brand-950 text-lg">✓ Order Verified</span>
+        <div className="flex items-center gap-2">
+          <span className="text-green-600 text-lg">✓</span>
+          <span className="font-black text-brand-950 text-base">Order Verified</span>
         </div>
       }
     >
-      <div className="space-y-5">
-        {order._isMockFallback ? (
-          <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 text-center">
-            <p className="text-2xl mb-2">✓</p>
-            <p className="text-amber-900 font-black text-[14px]">Order #{order.id} — QR Verified</p>
-            <p className="text-amber-700 text-xs mt-1">Live data unavailable in demo mode</p>
+      <div className="flex flex-col gap-3">
+
+        {/* ── ORDER HEADER CARD ── */}
+        <div className="rounded-2xl bg-[#fdf8f6] border-2 border-brand-100 p-4 flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-black uppercase tracking-widest text-brand-400 mb-0.5">Order ID</p>
+            <h2 className="text-2xl font-black text-brand-950 leading-none mb-2">{order.id}</h2>
+            <p className="text-sm font-bold text-brand-700 truncate">{customerName}</p>
+            {pickupDate && (
+              <p className="text-xs text-brand-400 font-medium mt-1">
+                📅 {pickupDate}{pickupTime ? ` · ${pickupTime}` : ''}
+              </p>
+            )}
           </div>
-        ) : (
-          <>
-            <div className="bg-[#fdf8f6] rounded-xl p-4 border-2 border-brand-100">
-              <h2 className="text-xl font-black text-brand-950 mb-2">#{order.id}</h2>
-              <p className="text-[14px] font-bold text-brand-900 mb-3">{order.customer?.name || 'Walk-in'}</p>
-              <div className="bg-white rounded-lg p-3 max-h-[120px] overflow-y-auto">
-                <table className="w-full text-xs">
-                  <tbody className="divide-y divide-slate-200">
-                    {order.items?.map((item, i) => (
-                      <tr key={i} className="py-2">
-                        <td className="font-bold text-brand-950 py-1">{item.name}</td>
-                        <td className="text-right font-black text-brand-950 py-1">x{item.qty}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          {/* Status Badge */}
+          <div className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 ${sc.bg} ${sc.border}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
+            <span className={`text-[11px] font-black uppercase tracking-widest ${sc.text}`}>{order.status}</span>
+          </div>
+        </div>
+
+        {/* ── ITEMS ── */}
+        <div className="rounded-2xl border-2 border-slate-100 overflow-hidden bg-white">
+          <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Items Ordered</p>
+          </div>
+          {items.length > 0 ? (
+            <div className="divide-y divide-slate-50 max-h-[150px] overflow-y-auto">
+              {items.map((item, i) => (
+                <div key={i} className="flex items-center justify-between px-4 py-2.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="shrink-0 w-5 h-5 rounded-md bg-brand-100 text-brand-700 text-[10px] font-black flex items-center justify-center">
+                      {item.qty}
+                    </span>
+                    <span className="text-sm font-bold text-brand-950 truncate">{item.name}</span>
+                  </div>
+                  <span className="text-sm font-black text-brand-950 ml-2 shrink-0">{fmt(item.total)}</span>
+                </div>
+              ))}
             </div>
+          ) : (
+            <p className="text-center text-slate-400 text-sm py-4 font-medium">No items on record</p>
+          )}
+        </div>
 
-            <div className="bg-slate-50 rounded-lg p-4 border-2 border-slate-200">
-              <div className="flex justify-between mb-2 text-sm font-bold">
-                <span className="text-slate-600">Subtotal</span>
-                <span className="text-brand-950">{fmt(order.subtotal || order.grandTotal)}</span>
-              </div>
-              <div className="flex justify-between text-lg font-black border-t-2 border-slate-200 pt-2">
-                <span className="text-brand-950">Total</span>
-                <span className="text-green-700">{fmt(order.grandTotal)}</span>
-              </div>
+        {/* ── TOTALS ── */}
+        <div className="rounded-2xl border-2 border-slate-100 bg-white overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-50">
+            <span className="text-sm text-slate-500 font-semibold">Subtotal</span>
+            <span className="text-sm font-bold text-brand-950">{fmt(subtotal)}</span>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3">
+            <span className="text-base font-black text-brand-950">Grand Total</span>
+            <span className="text-xl font-black text-green-700">{fmt(grandTotal)}</span>
+          </div>
+        </div>
+
+        {/* ── PAYMENT STATUS ── */}
+        {paymentType && (
+          <div className={`rounded-2xl border-2 px-4 py-3 flex items-center justify-between
+            ${paymentType === 'deposit' ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-0.5">Payment</p>
+              <p className={`text-sm font-black ${paymentType === 'deposit' ? 'text-amber-800' : 'text-emerald-800'}`}>
+                {paymentType === 'deposit' ? 'Deposit Paid' : 'Fully Paid'}
+              </p>
             </div>
-
-            {order.status === 'Completed' && (
-              <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center">
-                <p className="text-2xl mb-2">✓</p>
-                <p className="text-green-900 font-black text-[14px]">This order is already completed.</p>
-              </div>
-            )}
-
-            {order.status === 'Cancelled' && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 text-center">
-                <p className="text-2xl mb-2">✕</p>
-                <p className="text-red-900 font-black text-[14px]">This order has been cancelled.</p>
-              </div>
-            )}
-
-            {(order.status === 'Confirmed' || order.status === 'Ready') && (
-              <Button
-                variant="primary"
-                className="w-full bg-green-600 text-white font-black hover:bg-green-700 flex items-center justify-center gap-2 py-3 rounded-lg"
-                onClick={() => { onStatusChange(order.id, 'Completed'); onClose(); }}
-              >
-                ✓ Mark as Completed
-              </Button>
-            )}
-          </>
+            <div className="text-right">
+              <p className={`text-base font-black ${paymentType === 'deposit' ? 'text-amber-800' : 'text-emerald-800'}`}>
+                {fmt(amountPaid)}
+              </p>
+              {paymentType === 'deposit' && (
+                <p className="text-xs font-bold text-red-500">Balance: {fmt(balance)}</p>
+              )}
+            </div>
+          </div>
         )}
+
+        {/* ── STATUS BANNERS ── */}
+        {order.status === 'Completed' && (
+          <div className="rounded-2xl bg-green-50 border-2 border-green-200 px-4 py-3 flex items-center gap-3">
+            <span className="text-xl">✅</span>
+            <p className="text-green-900 font-black text-sm">This order has already been completed.</p>
+          </div>
+        )}
+        {order.status === 'Cancelled' && (
+          <div className="rounded-2xl bg-red-50 border-2 border-red-200 px-4 py-3 flex items-center gap-3">
+            <span className="text-xl">❌</span>
+            <p className="text-red-900 font-black text-sm">This order has been cancelled.</p>
+          </div>
+        )}
+
+        {/* ── ACTION BUTTONS ── */}
+        <div className="flex flex-col gap-2 pt-1">
+          {(order.status === 'Confirmed' || order.status === 'Ready') && (
+            <Button
+              className="w-full bg-green-600 text-white font-black py-3 rounded-xl hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+              onClick={() => { onStatusChange(order.id, 'Completed'); onClose(); }}
+            >
+              ✓ Mark as Completed
+            </Button>
+          )}
+          {order.status === 'Confirmed' && (
+            <Button
+              variant="secondary"
+              className="w-full bg-blue-50 text-blue-900 border-2 border-blue-200 font-black py-2.5 rounded-xl hover:bg-blue-100 transition-colors"
+              onClick={() => { onStatusChange(order.id, 'Ready'); onClose(); }}
+            >
+              Mark as Ready
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            className="w-full border-2 border-slate-200 text-slate-600 font-bold py-2.5 rounded-xl hover:bg-slate-50 transition-colors text-sm"
+            onClick={() => { onClose(); navigate('/orders'); }}
+          >
+            View Full Details →
+          </Button>
+        </div>
+
       </div>
     </Modal>
   );
@@ -280,6 +355,9 @@ export default function MobileQRScanner() {
   const [scanResultOrder, setScanResultOrder] = useState(null);
   const [scanResultOpen, setScanResultOpen] = useState(false);
   const [tokenValid, setTokenValid] = useState(false);
+  const [cameraAvailable, setCameraAvailable] = useState(true);
+  const [manualOrderId, setManualOrderId] = useState('');
+  const [manualError, setManualError] = useState('');
   const lastScanTime = useRef(0);
 
   useEffect(() => {
@@ -321,54 +399,91 @@ export default function MobileQRScanner() {
     const now = Date.now();
     if (now - lastScanTime.current < 2000) return;
     lastScanTime.current = now;
-    processQRData(detectedCodes[0].rawValue);
+    const raw = detectedCodes[0]?.rawValue ?? detectedCodes[0]?.text ?? detectedCodes[0]?.data ?? (typeof detectedCodes[0] === 'string' ? detectedCodes[0] : null);
+    processQRData(raw);
   };
 
   const processQRData = (qrData) => {
-    try {
-      const payload = JSON.parse(qrData);
-      const { orderId, token } = payload;
+  try {
+    let payloadStr = qrData;
+    const firstBrace = String(qrData).indexOf('{');
+    if (firstBrace >= 0) payloadStr = qrData.slice(firstBrace);
 
-      const isValid = verifyReceiptToken(orderId, token);
+    const payload = JSON.parse(payloadStr);
+    const { orderId, token } = payload;
 
-      if (!isValid) {
-        setTokenValid(false);
-        setScanResultOrder({ id: orderId });
-        setScanResultOpen(true);
-        showToast('❌ Invalid QR code (token mismatch)', 'error');
-        return;
-      }
+    const isValid = verifyReceiptToken(orderId, token);
 
-      const foundOrder = orders.find(o =>
-        o.id === orderId ||
-        o.id === `ORD-${orderId}` ||
-        `ORD-${o.id}` === orderId ||
-        o.id.replace('#', '') === orderId.replace('#', '')
-      );
+    // Find order — try multiple ID formats
+    const foundOrder = orders.find(o =>
+      o.id === orderId ||
+      o.id === `ORD-${orderId}` ||
+      `ORD-${o.id}` === orderId ||
+      o.id.replace('#', '').toUpperCase() === orderId.replace('#', '').toUpperCase()
+    );
 
-      setScanResultOrder(foundOrder || {
-        id: orderId,
-        customer: { name: 'Customer' },
-        items: [],
-        grandTotal: 0,
-        status: 'Confirmed',
-        _isMockFallback: true,
-      });
+    if (!isValid) {
+      setTokenValid(false);
+      setScanResultOrder(foundOrder || { id: orderId });
+      setScanResultOpen(true);
+      showToast('❌ Invalid QR code (token mismatch)', 'error');
+      return;
+    }
 
+    if (!foundOrder) {
+      showToast('❌ Order not found', 'error');
+      return;
+    }
+
+    // ✅ Use the actual order from dummy data — no mock fallback
+    setScanResultOrder(foundOrder);
+    setTokenValid(true);
+    setScanResultOpen(true);
+    showToast('✓ QR verified!', 'success');
+
+  } catch (e) {
+    // Not JSON — try plain order ID lookup
+    const cleanId = qrData.replace('#', '').trim().toUpperCase();
+
+    const foundOrder = orders.find(o =>
+      o.id.replace('#', '').toUpperCase() === cleanId ||
+      o.id.replace('ORD-', '').toUpperCase() === cleanId ||
+      (`ORD-${o.id}`).replace('#', '').toUpperCase() === cleanId
+    );
+
+    if (foundOrder) {
+      setScanResultOrder(foundOrder);
       setTokenValid(true);
       setScanResultOpen(true);
-      showToast('✓ QR verified!', 'success');
-    } catch (e) {
-      const cleanId = qrData.replace('#', '').trim().toUpperCase();
-      const foundOrder = orders.find(o => o.id.replace('#', '').toUpperCase() === cleanId);
-      if (foundOrder) {
-        setScanResultOrder(foundOrder);
-        setTokenValid(true);
-        setScanResultOpen(true);
-        showToast(`Order ${cleanId} found!`, 'success');
-      } else {
-        showToast('❌ Invalid QR code format or order not found', 'error');
-      }
+      showToast(`Order ${foundOrder.id} found!`, 'success');
+    } else {
+      showToast('❌ Order not found', 'error');
+    }
+  }
+};
+
+  // Manual input handler (no token verification)
+  const handleManualSubmit = (e) => {
+    e?.preventDefault();
+    setManualError('');
+    const raw = manualOrderId.trim();
+    if (!raw) return setManualError('Please enter an Order ID');
+
+    const cleanId = raw.replace('#', '').toUpperCase();
+    const foundOrder = orders.find(o =>
+      o.id.replace('#', '').toUpperCase() === cleanId ||
+      (`ORD-${o.id}`).replace('#', '').toUpperCase() === cleanId ||
+      o.id.toUpperCase() === cleanId
+    );
+
+    if (foundOrder) {
+      setScanResultOrder(foundOrder);
+      setTokenValid(true);
+      setScanResultOpen(true);
+      setManualOrderId('');
+      showToast(`Order ${foundOrder.id} found!`, 'success');
+    } else {
+      setManualError(`Order ${raw} not found`);
     }
   };
 
@@ -409,22 +524,26 @@ export default function MobileQRScanner() {
         <div className="w-full max-w-sm">
           <div className="bg-black rounded-2xl overflow-hidden shadow-2xl mb-6" style={{ aspectRatio: '1' }}>
             <div className="w-full h-full">
-              <Scanner
-                onScan={handleScan}
-                onError={(error) => {
-                  console.error('Scanner error:', error);
-                  showToast(`Camera error: ${error?.message || 'Unable to access camera'}`, 'error');
-                }}
-                formats={['qr_code']}
-                components={{ audio: false, torch: true }}
-                constraints={{
-                  video: {
-                    facingMode: 'environment',
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 }
-                  }
-                }}
-              />
+              {cameraAvailable ? (
+                <Scanner
+                  onScan={handleScan}
+                  onError={(error) => {
+                    console.error('Scanner error:', error);
+                    setCameraAvailable(false);
+                    showToast('Camera unavailable — use manual input below to test', 'error');
+                  }}
+                  formats={['qr_code']}
+                  components={{ audio: false, torch: true }}
+                  constraints={{ video: { facingMode: 'environment' } }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center p-4 text-center">
+                  <div>
+                    <p className="text-white font-bold mb-2">Camera unavailable — use manual input below to test</p>
+                    <p className="text-xs text-white/70">(If you're on localhost or blocked camera, use the manual field.)</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -434,6 +553,20 @@ export default function MobileQRScanner() {
             <p className="text-xs text-white/70 mt-1">Automatic detection and verification</p>
           </div>
         </div>
+      </div>
+      {/* Manual input for testing/fallback */}
+      <div className="max-w-sm mx-auto w-full mt-4 px-4">
+        <form onSubmit={handleManualSubmit} className="flex gap-2">
+          <input
+            aria-label="Manual Order ID"
+            value={manualOrderId}
+            onChange={(e) => { setManualOrderId(e.target.value); setManualError(''); }}
+            placeholder="e.g. ORD-0241"
+            className="flex-1 px-4 py-3 rounded-lg text-slate-900"
+          />
+          <Button type="submit" className="px-4 bg-brand-900 text-white">Search</Button>
+        </form>
+        {manualError && <p className="text-red-600 text-sm mt-2 text-center">{manualError}</p>}
       </div>
 
       <ScanResultModal
