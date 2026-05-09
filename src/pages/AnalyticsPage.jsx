@@ -275,43 +275,37 @@ import { useState, useMemo, useEffect, useRef } from 'react';
         const growthItems = ANALYTICS.predictive.growthLeaders[vk].map(item => `${item.name} (+${item.pct}%)`).join(', ');
         const riskItems = ANALYTICS.predictive.atRisk[vk].map(item => `${item.name} (${item.pct}%)`).join(', ');
 
-        const timeframePinas = view === 'Day' ? 'Arawan (Daily)' 
-                            : view === 'Week' ? 'Lingguhan (Weekly)' 
-                            : view === 'Month' ? 'Buwanan (Monthly)' 
-                            : 'Taunan (Yearly)';
+        const timeframePinas = view === 'Day' ? 'Today' 
+                            : view === 'Week' ? 'nitong Linggo' 
+                            : view === 'Month' ? 'nitong Buwan' 
+                            : 'nitong Taon';
 
         const systemPrompt = `
-          Ikaw ay Business Analyst para sa isang bake shop. Ang iyong trabaho ay mag-generate ng tatlong uri ng analysis batay sa objectives ng sistema:
-          1. DESCRIPTIVE - pagsusuri ng kasalukuyan at nakaraang performance gamit ang aktwal na datos
-          2. PREDICTIVE - sales at product trend forecasting
-          3. PRESCRIPTIVE - rekomendasyon para sa sales
+          Ikaw ay isang friendly at practical Business Mentor para sa isang Pinoy bake shop. 
+          Ang goal mo ay tulungan ang owner na intindihin ang data sa paraang simple at madaling sundin.
 
-          TIMEFRAME: ${timeframePinas} na report para sa kasalukuyang ${view.toLowerCase()}.
+          TIMEFRAME: Report para sa performance ${timeframePinas}.
 
-          AKTWAL NA KPI DATA (gamitin ang eksaktong numbers na ito):
-          - Total Sales: ₱${kpi.sales.toLocaleString('en-PH')} (${kpi.sDelta >= 0 ? '+' : ''}${kpi.sDelta}% vs prior ${view.toLowerCase()})
-          - Total Expenses: ₱${kpi.expenses.toLocaleString('en-PH')} (${kpi.eDelta >= 0 ? '+' : ''}${kpi.eDelta}% vs prior ${view.toLowerCase()})
-          - Gross Profit: ₱${kpi.profit.toLocaleString('en-PH')} (${kpi.pDelta >= 0 ? '+' : ''}${kpi.pDelta}% vs prior ${view.toLowerCase()})
-          - Profit Margin: ${kpi.margin.toFixed(1)}% (${kpi.mDelta >= 0 ? '+' : ''}${kpi.mDelta}% vs prior ${view.toLowerCase()})
-          - Top Products: ${topProds.map((p, i) => `${i+1}. ${p.name} (${p.sold} pcs)`).join(', ')}
-
-          PREDICTIVE DATA:
-          - Inaasahang TATAAS: ${growthItems}
-          - Inaasahang BABABA (At Risk): ${riskItems}
+          AKTWAL NA DATA:
+          - Total Sales: ₱${kpi.sales.toLocaleString('en-PH')} (${kpi.sDelta >= 0 ? '+' : ''}${kpi.sDelta}% vs last ${view.toLowerCase()})
+          - Total Expenses: ₱${kpi.expenses.toLocaleString('en-PH')}
+          - Gross Profit: ₱${kpi.profit.toLocaleString('en-PH')}
+          - Top Products: ${topProds.map((p, i) => `${p.name} (${p.sold} pcs)`).join(', ')}
+          - Trending Up: ${growthItems}
+          - Trending Down: ${riskItems}
 
           INSTRUCTIONS:
-          - Para sa "descriptive": Isulat ang 2-3 sentences na nagtatala ng AKTWAL na performance gamit ang totoong numbers (₱ amounts, %, pcs). Sabihin kung pataas o pababa ang benta, gastos, at kita kumpara sa nakaraang ${view.toLowerCase()}. Dapat specific at data-driven, hindi vague.
-          - Para sa "prescriptive": Magbigay ng 3-4 actionable recommendations na nakatuon sa SALES STRATEGY, MARKETING, at CUSTOMER ENGAGEMENT batay sa predictive data. 
-            STRICT RULE: BAWAL magbigay ng rekomendasyon tungkol sa inventory, stock, o supply management.
+          - Para sa "descriptive": Mag-summarize ka ng performance sa 2-3 sentences. Gamitin ang "Taglish" (Tagalog-English). Wag masyadong pormal, parang nagkukwento lang sa owner kung kumusta ang benta at kita.
+          - Para sa "prescriptive": Magbigay ng 3-4 na SOBRANG SIMPLENG TIPS (Actionable). Focus lang sa diskarte sa benta at promosyon. Iwasan ang mga techy na terms. 
+          - STRICT RULE: BAWAL ang kahit anong tip tungkol sa inventory o stock management.
 
-          RETURN ONLY A VALID JSON OBJECT (walang markdown, walang backticks):
+          RETURN ONLY A VALID JSON OBJECT:
           {
-            "descriptive": "2-3 sentences na may actual figures...",
+            "descriptive": "Heto ang summary natin nitong... Medyo tumaas ang benta natin ng...",
             "prescriptive": [
-              { "badge": "PROMO", "title": "...", "desc": "...", "type": "success" },
-              { "badge": "BENTA", "title": "...", "desc": "...", "type": "info" },
-              { "badge": "SERBISYO", "title": "...", "desc": "...", "type": "neutral" },
-              { "badge": "ESTRATEHIYA", "title": "...", "desc": "...", "type": "warning" }
+              { "badge": "DISKARTE", "title": "Try niyo ito...", "desc": "Baka pwedeng mag-post sa Facebook ng...", "type": "success" },
+              { "badge": "PROMO", "title": "Benta tip...", "desc": "Try niyo i-bundle ang...", "type": "info" },
+              { "badge": "TANDAAN", "title": "Quick reminder...", "desc": "Since trending ang..., baka pwedeng...", "type": "warning" }
             ]
           }
         `;
@@ -332,7 +326,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
         localStorage.setItem(cacheKey, JSON.stringify(parsed));
       } catch (err) {
         console.error(err);
-        setAiError("Nabigong makuha ang AI data. Paki-refresh.");
+        setAiError("Oops! Nagka-error sa AI. Pa-refresh na lang po.");
       } finally {
         setIsAiLoading(false);
       }

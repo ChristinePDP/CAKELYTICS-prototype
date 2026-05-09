@@ -15,12 +15,13 @@ const NAV = [
     items: [
       { label: 'Point Of Sale', icon: Monitor, to: '/pos' },
       { label: 'All Orders', icon: ClipboardCheck, to: '/orders' },
+      { label: 'Product Management', icon: ShoppingCart, to: '/products' },
     ],
   },
   {
     section: 'CATALOG',
     items: [
-      { label: 'Product Management', icon: ShoppingCart, to: '/products' },
+      
       { label: 'Inventory', icon: List, to: '/inventory' },
     ],
   },
