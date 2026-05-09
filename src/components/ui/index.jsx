@@ -131,9 +131,9 @@ export function Table({ columns, children, className = '' }) {
     <div className={`overflow-auto ${className}`}>
       <table className="w-full border-collapse min-w-full">
         <thead>
-          <tr className="bg-brand-50 border-b border-brand-200">
+          <tr className="bg-brand-600 border-b border-brand-200">
             {columns.map((col, i) => (
-              <th key={i} className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-brand-500 text-left whitespace-nowrap ${col.align === 'right' ? 'text-right' : ''} ${col.align === 'center' ? 'text-center' : ''}`}>{col.label}</th>
+              <th key={i} className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-white text-left whitespace-nowrap ${col.align === 'right' ? 'text-right' : ''} ${col.align === 'center' ? 'text-center' : ''}`}>{col.label}</th>
             ))}
           </tr>
         </thead>

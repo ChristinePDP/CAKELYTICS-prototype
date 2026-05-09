@@ -209,7 +209,7 @@ export function TopBar({ title }) {
         <div className="w-[1px] h-6 bg-brand-200" />
         
         <div className="flex items-center gap-2.5">
-          <span className="text-[15px] font-semibold text-brand-400">Evangeline V.</span>
+          <span className="text-[15px] font-semibold text-brand-700">Evangeline V.</span>
           <div className="w-8 h-8 rounded-full bg-brand-800 flex items-center justify-center text-white text-sm font-bold">E</div>
         </div>
       </div>

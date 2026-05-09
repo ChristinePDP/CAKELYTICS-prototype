@@ -46,7 +46,7 @@ export default function ProductLogTab() {
         {/* ─── HEADER: matches RawTab style ─── */}
         <div className="flex items-center justify-between p-4 border-b border-brand-100">
           <div>
-            <h3 className="font-serif font-bold text-brand-800">Product Log</h3>
+            <h3 className=" font-bold text-brand-800">Product Log</h3>
             <p className="text-xs text-brand-400 mt-0.5">
               Lahat ng na-confirm na batch production. Reference ito bago mag-log ng unsold sa Waste Log.
             </p>

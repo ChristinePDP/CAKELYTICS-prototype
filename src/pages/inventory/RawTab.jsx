@@ -41,7 +41,7 @@ export default function RawTab() {
       <Card>
         <div className="flex items-center justify-between p-4 border-b border-brand-100">
           <div>
-            <h3 className="font-serif font-bold text-brand-800">Raw Ingredients</h3>
+            <h3 className=" font-bold text-brand-800">Raw Ingredients</h3>
             <p className="text-xs text-brand-400 mt-0.5">Low = below 2× minimum stock. Enough = at or above 2× minimum.</p>
           </div>
           <Button variant="dark" onClick={() => { setEditIng(null); setModalOpen(true); }}>

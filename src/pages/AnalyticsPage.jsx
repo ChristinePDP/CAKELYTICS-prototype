@@ -530,7 +530,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
               
               {/* PERFORMANCE SUMMARY (FULL WIDTH SA TAAS) */}
               {aiData && (
-                <div className="lg:col-span-3 bg-gradient-to-br from-brand-50/80 to-white border border-brand-200 rounded-2xl p-6 shadow-sm relative overflow-hidden group">
+                <div className="lg:col-span-3 bg-white border border-brand-200 rounded-2xl p-6 shadow-sm relative overflow-hidden group">
                   <div className="relative z-10">
                     <h3 className="text-[12px] font-black text-brand-500 uppercase tracking-widest mb-3 flex items-center gap-2">
                       <Lightbulb size={16} className="text-amber-500" /> Performance Summary
