@@ -94,12 +94,12 @@ import { useState, useMemo, useEffect, useRef } from 'react';
     }
 
     return (
-      <div className="bg-white border border-brand-100 rounded-xl overflow-hidden">
+      <div className="bg-white border border-brand-300 rounded-xl overflow-hidden">
         <div className="h-1 w-full" style={{ background: accentColor }} />
         <div className="p-4">
           <div className="flex items-start justify-between mb-3">
             <p className="text-[11px] font-bold uppercase tracking-wider text-brand-400">{label}</p>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: accentColor+'18' }}>
+            <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ background: accentColor+'18' }}>
               {icon}
             </div>
           </div>
@@ -284,7 +284,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
           Ikaw ay Business Analyst para sa isang bake shop. Ang iyong trabaho ay mag-generate ng tatlong uri ng analysis batay sa objectives ng sistema:
           1. DESCRIPTIVE - pagsusuri ng kasalukuyan at nakaraang performance gamit ang aktwal na datos
           2. PREDICTIVE - sales at product trend forecasting
-          3. PRESCRIPTIVE - rekomendasyon para sa sales at inventory optimization
+          3. PRESCRIPTIVE - rekomendasyon para sa sales
 
           TIMEFRAME: ${timeframePinas} na report para sa kasalukuyang ${view.toLowerCase()}.
 
@@ -301,16 +301,17 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 
           INSTRUCTIONS:
           - Para sa "descriptive": Isulat ang 2-3 sentences na nagtatala ng AKTWAL na performance gamit ang totoong numbers (₱ amounts, %, pcs). Sabihin kung pataas o pababa ang benta, gastos, at kita kumpara sa nakaraang ${view.toLowerCase()}. Dapat specific at data-driven, hindi vague.
-          - Para sa "prescriptive": 3-4 actionable recommendations na nakatuon sa inventory optimization at sales strategy batay sa predictive data.
+          - Para sa "prescriptive": Magbigay ng 3-4 actionable recommendations na nakatuon sa SALES STRATEGY, MARKETING, at CUSTOMER ENGAGEMENT batay sa predictive data. 
+            STRICT RULE: BAWAL magbigay ng rekomendasyon tungkol sa inventory, stock, o supply management.
 
           RETURN ONLY A VALID JSON OBJECT (walang markdown, walang backticks):
           {
             "descriptive": "2-3 sentences na may actual figures...",
             "prescriptive": [
-              { "badge": "INVENTORY", "title": "...", "desc": "...", "type": "warning" },
-              { "badge": "BENTA", "title": "...", "desc": "...", "type": "success" },
-              { "badge": "PRODUKTO", "title": "...", "desc": "...", "type": "danger" },
-              { "badge": "ESTRATEHIYA", "title": "...", "desc": "...", "type": "info" }
+              { "badge": "PROMO", "title": "...", "desc": "...", "type": "success" },
+              { "badge": "BENTA", "title": "...", "desc": "...", "type": "info" },
+              { "badge": "SERBISYO", "title": "...", "desc": "...", "type": "neutral" },
+              { "badge": "ESTRATEHIYA", "title": "...", "desc": "...", "type": "warning" }
             ]
           }
         `;
