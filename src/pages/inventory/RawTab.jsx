@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useToast, Button, Modal, Input, Select, Table, Tr, Td, Pagination, Badge, Card, LevelBar, ConfirmModal } from '../../components/ui';
 import { ingStatus } from '../../utils/inventoryHelpers';
@@ -10,11 +10,15 @@ export default function RawTab() {
   const { ingredients, addIngredient, updateIngredient, deleteIngredient } = useApp();
   const { show: showToast } = useToast();
   const [page, setPage]             = useState(1);
+  const [search, setSearch]         = useState('');
   const [modalOpen, setModalOpen]   = useState(false);
   const [editIng, setEditIng]       = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  const paged = ingredients.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const filtered = ingredients.filter(i =>
+    i.name.toLowerCase().includes(search.toLowerCase())
+  );
+  const paged = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const handleSave = (data, addedQty = 0, note = '') => {
     if (editIng?.id) {
@@ -44,6 +48,20 @@ export default function RawTab() {
             <Plus size={14} /> Add New Ingredient
           </Button>
         </div>
+
+        {/* Search */}
+        <div className="px-4 py-3 border-b border-brand-100 bg-brand-50/40">
+          <div className="relative max-w-xs">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-300" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Search ingredient..."
+              className="w-full pl-8 pr-3 py-1.5 text-sm border border-brand-200 rounded-lg outline-none focus:border-brand-400 bg-white"
+            />
+          </div>
+        </div>
         <Table columns={[
           { label: 'Ingredient' },
           { label: 'Current Stock' },
@@ -69,7 +87,7 @@ export default function RawTab() {
             );
           })}
         </Table>
-        <Pagination page={page} count={ingredients.length} perPage={PER_PAGE} total="ingredients" onChange={setPage} />
+        <Pagination page={page} count={filtered.length} perPage={PER_PAGE} total="ingredients" onChange={setPage} />
       </Card>
 
       <IngredientModal isOpen={modalOpen} onClose={() => setModalOpen(false)} ingredient={editIng} onSave={handleSave} />

@@ -60,7 +60,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
     if (!active || !payload?.length) return null;
     const total = payload.reduce((sum, p) => sum + (p.value || 0), 0);
     return (
-      <div className="bg-white border border-brand-200 rounded-xl shadow-lg p-3 text-sm">
+      <div className="bg-white border border-brand-200 rounded-md shadow-lg p-3 text-sm">
         <p className="font-semibold text-brand-800 mb-2">{label}</p>
         <p className="flex items-center gap-2 mb-1 text-brand-600">
           <span className="w-2 h-2 rounded-full inline-block bg-blue-500" />

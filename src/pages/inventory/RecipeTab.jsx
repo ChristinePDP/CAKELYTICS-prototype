@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, CheckCircle2, ShoppingCart, Edit2 } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, ShoppingCart, Edit2, Search } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useToast, Button, Modal, Input, Select, Table, Tr, Td, Card, ConfirmModal } from '../../components/ui';
 
@@ -19,79 +19,85 @@ export default function RecipeTab() {
 
   const [quotas, setQuotas] = useState({});
   const [localStocks, setLocalStocks] = useState({});
+  const [search, setSearch] = useState('');
 
   // ── PAGINATION ──
   const PAGE_SIZE = 8;
   const [currentPage, setCurrentPage] = useState(1);
 
-  // ── 1. SARILING CALCULATOR PARA SA EXPECTED ──
+  // ── CALCULATOR ──
   const calculateMaxUnits = (recipe, inventory) => {
     if (!recipe.ingredients || recipe.ingredients.length === 0) return 0;
     let maxBatches = Infinity;
-    
     for (const req of recipe.ingredients) {
       const stockItem = inventory.find(i => i.name.trim().toLowerCase() === req.name.trim().toLowerCase());
       if (!stockItem || Number(stockItem.stock) <= 0) return 0;
-      
       const possibleBatches = Math.floor(Number(stockItem.stock) / Number(req.qty));
       if (possibleBatches < maxBatches) maxBatches = possibleBatches;
     }
-    
     return maxBatches === Infinity ? 0 : maxBatches * Number(recipe.yield);
   };
 
-  // ── 2. CONSOLIDATED SHORTFALL — iisa lang ang stock, pinagsama-samang need ng lahat ng recipe ──
-  const consolidatedShortfalls = useMemo(() => {
-    // Step 1: I-total ang needed per ingredient — ONLY para sa recipes na HINDI kaya ng current stock
-    const totalNeededMap = {}; // { ingredientName: { unit, totalNeeded, products[] } }
-
+  // ── AUTO SHOPPING LIST: recipes na 0 ang stock capacity ──
+  const zeroCapacityShortfalls = useMemo(() => {
+    const totalNeededMap = {};
     for (const r of recipes) {
-      const targetGoal = Number(quotas[r.id]);
-      if (!targetGoal || targetGoal <= 0) continue;
-
-      // ✅ SKIP ang recipe kung kaya na ng existing stock — huwag isama sa computation
       const maxUnits = calculateMaxUnits(r, ingredients);
-      if (maxUnits >= targetGoal) continue;
-
-      const neededBatches = Math.ceil(targetGoal / Number(r.yield));
-
+      if (maxUnits > 0) continue;
       for (const req of r.ingredients) {
         const key = req.name.trim().toLowerCase();
         if (!totalNeededMap[key]) {
-          totalNeededMap[key] = { name: req.name, unit: req.unit, totalNeeded: 0, products: [] };
+          totalNeededMap[key] = { name: req.name, unit: req.unit, totalNeeded: 0 };
         }
-        totalNeededMap[key].totalNeeded = +(totalNeededMap[key].totalNeeded + Number(req.qty) * neededBatches).toFixed(4);
-        if (!totalNeededMap[key].products.includes(r.product)) totalNeededMap[key].products.push(r.product);
+        totalNeededMap[key].totalNeeded = +(totalNeededMap[key].totalNeeded + Number(req.qty)).toFixed(4);
       }
     }
-
-    // Step 2: I-compare sa actual stock — isang beses lang per ingredient
     const result = [];
     for (const entry of Object.values(totalNeededMap)) {
       const stockItem = ingredients.find(i => i.name.trim().toLowerCase() === entry.name.trim().toLowerCase());
       const have = stockItem ? Number(stockItem.stock) : 0;
       if (have < entry.totalNeeded) {
-        result.push({
-          name: entry.name,
-          unit: entry.unit,
-          have,
-          need: entry.totalNeeded,
-          shortage: +(entry.totalNeeded - have).toFixed(4),
-          products: entry.products,
-        });
+        result.push({ name: entry.name, unit: entry.unit, have, shortage: +(entry.totalNeeded - have).toFixed(4) });
+      }
+    }
+    return result;
+  }, [recipes, ingredients]);
+
+  // ── QUOTA-BASED SHORTFALLS ──
+  const consolidatedShortfalls = useMemo(() => {
+    const totalNeededMap = {};
+    for (const r of recipes) {
+      const targetGoal = Number(quotas[r.id]);
+      if (!targetGoal || targetGoal <= 0) continue;
+      const maxUnits = calculateMaxUnits(r, ingredients);
+      if (maxUnits >= targetGoal) continue;
+      const neededBatches = Math.ceil(targetGoal / Number(r.yield));
+      for (const req of r.ingredients) {
+        const key = req.name.trim().toLowerCase();
+        if (!totalNeededMap[key]) {
+          totalNeededMap[key] = { name: req.name, unit: req.unit, totalNeeded: 0 };
+        }
+        totalNeededMap[key].totalNeeded = +(totalNeededMap[key].totalNeeded + Number(req.qty) * neededBatches).toFixed(4);
+      }
+    }
+    const result = [];
+    for (const entry of Object.values(totalNeededMap)) {
+      const stockItem = ingredients.find(i => i.name.trim().toLowerCase() === entry.name.trim().toLowerCase());
+      const have = stockItem ? Number(stockItem.stock) : 0;
+      if (have < entry.totalNeeded) {
+        result.push({ name: entry.name, unit: entry.unit, have, shortage: +(entry.totalNeeded - have).toFixed(4) });
       }
     }
     return result;
   }, [recipes, ingredients, quotas]);
 
-  // para sa banner trigger lang
-  const perRecipeShortfalls = consolidatedShortfalls.length > 0
-    ? recipes.filter(r => {
-        const targetGoal = Number(quotas[r.id]);
-        if (!targetGoal || targetGoal <= 0) return false;
-        return calculateMaxUnits(r, ingredients) < targetGoal;
-      }).map(r => ({ product: r.product, goal: Number(quotas[r.id]), yieldUnit: r.yieldUnit }))
-    : [];
+  // ── MERGE both lists (quota overrides zero-capacity, deduplicated) ──
+  const allShortfalls = useMemo(() => {
+    const map = {};
+    for (const item of zeroCapacityShortfalls) map[item.name.trim().toLowerCase()] = item;
+    for (const item of consolidatedShortfalls) map[item.name.trim().toLowerCase()] = item;
+    return Object.values(map);
+  }, [zeroCapacityShortfalls, consolidatedShortfalls]);
 
   // ── MODAL HANDLERS ──
   const openAdd = () => {
@@ -109,7 +115,7 @@ export default function RecipeTab() {
     if (!product || !yld) return;
     const ings = rows.filter(r => r.name && r.qty);
     const data = {
-      product: product.trim(), 
+      product: product.trim(),
       estimatedCost: Number(cost) || 0,
       yield: Number(yld), yieldUnit: yldUnit,
       ingredients: ings.map(r => ({ name: r.name.trim(), qty: Number(r.qty), unit: r.unit || 'units' })),
@@ -119,209 +125,207 @@ export default function RecipeTab() {
     setModalOpen(false);
   };
 
-  // ── REKTA CONFIRM + INSTANT STOCK UPDATE UI ──
   const handleDirectConfirm = (recipe, goalNum) => {
     if (!goalNum || goalNum <= 0) return;
-
-    // 1. Ibawas ang ingredients sa backend/context
     if (confirmBatch) confirmBatch(recipe.id, goalNum);
-
-    // 2. Kunin ang kasalukuyang stock (base sa local override o galing context)
     const matchedProduct = products.find(p => p.name.trim().toLowerCase() === recipe.product.trim().toLowerCase());
     const contextStock = matchedProduct ? Number(matchedProduct.stock) : 0;
     const actualCurrentStock = localStocks[recipe.id] !== undefined ? localStocks[recipe.id] : contextStock;
-    
-    const addedStock = Number(goalNum);
-    const newStock = actualCurrentStock + addedStock;
-
-    // 3. I-update agad ang local UI para walang delay
+    const newStock = actualCurrentStock + Number(goalNum);
     setLocalStocks(prev => ({ ...prev, [recipe.id]: newStock }));
-
-    // 5. I-clear ang input box
     setQuotas(prev => { const n = { ...prev }; delete n[recipe.id]; return n; });
+    showToast(`✓ ${goalNum} ${recipe.yieldUnit || 'pcs'} ng ${recipe.product} na-produce — naka-log sa Product Log.`, 'success');
   };
 
   return (
     <div className="space-y-4">
 
-      {/* ── SHOPPING LIST BANNER — lumabas ITAAS kapag may kulang na ingredients ── */}
-      {consolidatedShortfalls.length > 0 && (
-        <div className="border border-red-200 bg-red-50 rounded-xl overflow-hidden shadow-sm">
+      {/* ── SHOPPING LIST BANNER ── */}
+      {allShortfalls.length > 0 && (
+        <div className="border border-red-200 bg-white rounded-xl overflow-hidden shadow-sm">
           {/* Header */}
-          <div className="flex items-center gap-2.5 px-4 py-3 border-b border-red-200 bg-red-100/70">
-            <ShoppingCart size={16} className="text-red-700 shrink-0" />
-            <p className="text-xs font-bold uppercase tracking-wider text-red-800 flex-1">
-              ⚠️ Hindi Sapat ang Ingredients — Kailangan Pang Bilhin
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border-b border-red-200">
+            <ShoppingCart size={14} className="text-red-600 shrink-0" />
+            <p className="text-xs font-bold uppercase tracking-wider text-red-700 flex-1">
+              Shopping List — Kailangan Pang Bilhin
             </p>
-            <span className="text-[11px] bg-red-200 text-red-800 font-bold px-2 py-0.5 rounded-full">
-              {consolidatedShortfalls.length} ingredient{consolidatedShortfalls.length > 1 ? 's' : ''} kulang
+            <span className="text-[10px] font-bold bg-red-600 text-white px-2 py-0.5 rounded-full">
+              {allShortfalls.length} item{allShortfalls.length > 1 ? 's' : ''}
             </span>
           </div>
 
-          <div className="p-4">
-            <div className="bg-white rounded-lg border border-red-100 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-red-50/50 border-b border-red-100">
-                    <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">Ingredient</th>
-                    <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-gray-500">Para sa</th>
-                    <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-gray-500">Mayroon</th>
-                    <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-gray-500">Total Kailangan</th>
-                    <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-red-600">Kulang (Bilhin)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {consolidatedShortfalls.map(item => (
-                    <tr key={item.name} className="border-b border-red-50 last:border-0">
-                      <td className="px-3 py-2.5 font-semibold text-gray-800">{item.name}</td>
-                      <td className="px-3 py-2.5 text-center text-[11px] text-gray-500">{item.products.join(', ')}</td>
-                      <td className="px-3 py-2.5 text-right text-gray-500 text-xs">{item.have} {item.unit}</td>
-                      <td className="px-3 py-2.5 text-right text-gray-600 text-xs">{item.need} {item.unit}</td>
-                      <td className="px-3 py-2.5 text-right">
-                        <span className="font-bold text-red-700 bg-red-50 px-2.5 py-1 rounded-md border border-red-200 text-xs shadow-sm">
-                          +{item.shortage} {item.unit}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          {/* Simple list rows */}
+          <ul className="divide-y divide-gray-100">
+            {allShortfalls.map((item, idx) => (
+              <li key={item.name} className="flex items-center gap-3 px-4 py-2.5">
+                <span className="w-5 h-5 rounded-full bg-red-100 text-red-600 text-[10px] font-bold flex items-center justify-center shrink-0">
+                  {idx + 1}
+                </span>
+                <span className="flex-1 text-sm font-semibold text-gray-800">{item.name}</span>
+                <span className="text-xs text-gray-400">
+                  Mayroon: <span className="font-medium text-gray-600">{item.have} {item.unit}</span>
+                </span>
+                <span className="text-xs font-bold text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-md min-w-[80px] text-right">
+                  +{item.shortage} {item.unit}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
-      {/* MAIN TABLE */}
+      {/* ── MAIN TABLE (original design preserved) ── */}
       <Card>
         <div className="flex items-center justify-between p-4 border-b border-brand-100">
           <div>
-            <h3 className="font-bold text-brand-800">Recipe Log</h3>
+            <h3 className="font-bold text-brand-800">Product Log</h3>
             <p className="text-xs text-brand-400 mt-0.5">
-              Maglagay ng Goal. Magkukulay green ang input kapag sapat ang ingredients.
+              Maglagay ng Goal. Magkukulay green ang input kapas sapat ang ingredients.
             </p>
           </div>
           <Button variant="dark" onClick={openAdd}><Plus size={14} /> Add Recipe</Button>
         </div>
 
+        {/* Search */}
+        <div className="px-4 py-3 border-b border-brand-100 bg-brand-50/40">
+          <div className="relative max-w-xs">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-300" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+              placeholder="Search recipe..."
+              className="w-full pl-8 pr-3 py-1.5 text-sm border border-brand-200 rounded-lg outline-none focus:border-brand-400 bg-white"
+            />
+          </div>
+        </div>
+
         <Table columns={[
-          { label: 'Product Details' },
-          { label: 'Yield / Batch' },
-          { label: 'Cost / Batch' },
-          { label: 'Expected (Kaya)' },
-          { label: 'Set Goal' },
-          { label: 'Nagawa (Stock)' },
+          { label: 'Item Info' },
+          { label: 'Items per Batch' },
+          { label: 'Expense per Batch' },
+          { label: 'Stock Capacity' },
+          { label: 'Production Target' },
+          { label: 'Finished Production' },
           { label: 'Actions', align: 'right' },
         ]}>
           {(() => {
-            const totalPages = Math.max(1, Math.ceil(recipes.length / PAGE_SIZE));
-            const safePage = Math.min(currentPage, totalPages);
-            const paged = recipes.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-            return paged.map(r => {
-            const maxUnits = calculateMaxUnits(r, ingredients);
-            const quota    = quotas[r.id] || '';
-            const quotaNum = Number(quota);
-            const hasInput = quotaNum > 0;
-            const canMake  = hasInput && maxUnits >= quotaNum;
-
-            // Kunin ang stock — flexible match para sa slight name differences (e.g. "Cupcakes" vs "Cupcake")
-            const matchedProduct = products.find(p => {
-              const pn = p.name.trim().toLowerCase();
-              const rn = r.product.trim().toLowerCase();
-              return pn === rn || pn.startsWith(rn) || rn.startsWith(pn);
-            });
-            const contextStock = matchedProduct ? Number(matchedProduct.stock) : 0;
-            const currentStock = localStocks[r.id] !== undefined ? localStocks[r.id] : contextStock;
-
-            let inputClasses = "border-brand-200 focus:border-brand-400 bg-white text-brand-900";
-            if (hasInput) {
-              inputClasses = canMake
-                ? "border-emerald-500 bg-emerald-50 text-emerald-700 focus:border-emerald-600"
-                : "border-red-400 bg-red-50 text-red-700 focus:border-red-500";
-            }
-
-            return (
-              <Tr key={r.id}>
-                {/* 1. Product Details */}
-                <Td>
-                  <p className="font-bold text-brand-900 text-sm">{r.product}</p>
-                  <p className="text-[11px] text-brand-400 mt-0.5 truncate max-w-[160px]" title={r.ingredients.map(i => i.name).join(', ')}>
-                    {r.ingredients.map(i => i.name).join(', ')}
-                  </p>
-                </Td>
-
-                {/* 2. Yield per Batch */}
-                <Td>
-                  <p className="font-semibold text-brand-700 text-sm">{r.yield} {r.yieldUnit}</p>
-                </Td>
-
-                {/* 3. Cost per Batch */}
-                <Td>
-                  <p className="font-semibold text-brand-500 text-sm">₱{r.estimatedCost?.toLocaleString()}</p>
-                </Td>
-
-                {/* 4. Expected (Kaya) */}
-                <Td>
-                  <span className={`font-bold px-3 py-1.5 rounded-lg border shadow-sm whitespace-nowrap text-sm transition-all duration-300
-                    ${maxUnits === 0 ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}
-                  >
-                    {maxUnits} {r.yieldUnit}
-                  </span>
-                </Td>
-
-                {/* 5. Set Goal */}
-                <Td>
-                  <input
-                    type="number" min="1" value={quota}
-                    onChange={e => setQuotas(prev => ({ ...prev, [r.id]: e.target.value }))}
-                    placeholder="0"
-                    className={`w-[100px] px-3 py-2 text-sm border rounded-lg outline-none text-center font-bold transition-colors ${inputClasses}`}
-                  />
-                </Td>
-
-                {/* 6. Nagawa (Stock) */}
-                <Td>
-                  <span className="font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 shadow-sm whitespace-nowrap transition-all duration-300">
-                    {currentStock} {r.yieldUnit}
-                  </span>
-                </Td>
-
-                {/* 7. Actions */}
-                <Td align="right">
-                  <div className="flex items-center justify-end gap-2">
-                    <div className={`${canMake ? 'visible' : 'invisible'}`}>
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        className="whitespace-nowrap px-3 bg-emerald-600 hover:bg-emerald-700 border-none shadow-md"
-                        onClick={() => handleDirectConfirm(r, quotaNum)}
-                      >
-                        <CheckCircle2 size={14} className="mr-1" /> Confirm
-                      </Button>
-                    </div>
-                    <button onClick={() => openEdit(r)} className="p-1.5 text-brand-400 hover:text-brand-700 transition-colors bg-brand-50 hover:bg-brand-100 rounded-md">
-                      <Edit2 size={15} />
-                    </button>
-                    <button onClick={() => setDeleteTarget(r)} className="p-1.5 text-red-400 hover:text-red-600 transition-colors bg-red-50 hover:bg-red-100 rounded-md">
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </Td>
-              </Tr>
+            const filteredRecipes = recipes.filter(r =>
+              r.product.toLowerCase().includes(search.toLowerCase())
             );
-          })})()}
+            const totalPages = Math.max(1, Math.ceil(filteredRecipes.length / PAGE_SIZE));
+            const safePage = Math.min(currentPage, totalPages);
+            const paged = filteredRecipes.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+            return paged.map(r => {
+              const maxUnits = calculateMaxUnits(r, ingredients);
+              const quota    = quotas[r.id] || '';
+              const quotaNum = Number(quota);
+              const hasInput = quotaNum > 0;
+              const canMake  = hasInput && maxUnits >= quotaNum;
+
+              const matchedProduct = products.find(p => {
+                const pn = p.name.trim().toLowerCase();
+                const rn = r.product.trim().toLowerCase();
+                return pn === rn || pn.startsWith(rn) || rn.startsWith(pn);
+              });
+              const contextStock = matchedProduct ? Number(matchedProduct.stock) : 0;
+              const currentStock = localStocks[r.id] !== undefined ? localStocks[r.id] : contextStock;
+
+              let inputClasses = "border-brand-200 focus:border-brand-400 bg-white text-brand-900";
+              if (hasInput) {
+                inputClasses = canMake
+                  ? "border-emerald-500 bg-emerald-50 text-emerald-700 focus:border-emerald-600"
+                  : "border-red-400 bg-red-50 text-red-700 focus:border-red-500";
+              }
+
+              return (
+                <Tr key={r.id}>
+                  {/* 1. Product Details */}
+                  <Td>
+                    <p className="font-bold text-brand-900 text-sm">{r.product}</p>
+                    <p className="text-[11px] text-brand-400 mt-0.5 truncate max-w-[160px]" title={r.ingredients.map(i => i.name).join(', ')}>
+                      {r.ingredients.map(i => i.name).join(', ')}
+                    </p>
+                  </Td>
+
+                  {/* 2. Yield per Batch */}
+                  <Td>
+                    <p className="font-semibold text-brand-700 text-sm">{r.yield} {r.yieldUnit}</p>
+                  </Td>
+
+                  {/* 3. Cost per Batch */}
+                  <Td>
+                    <p className="font-semibold text-brand-500 text-sm">₱{r.estimatedCost?.toLocaleString()}</p>
+                  </Td>
+
+                  {/* 4. Stock Capacity */}
+                  <Td>
+                    <span className={`font-bold px-3 py-1.5 rounded-lg border shadow-sm whitespace-nowrap text-sm transition-all duration-300
+                      ${maxUnits === 0 ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}
+                    >
+                      {maxUnits} {r.yieldUnit}
+                    </span>
+                  </Td>
+
+                  {/* 5. Set Goal */}
+                  <Td>
+                    <input
+                      type="number" min="1" value={quota}
+                      onChange={e => setQuotas(prev => ({ ...prev, [r.id]: e.target.value }))}
+                      placeholder="0"
+                      className={`w-[100px] px-3 py-2 text-sm border rounded-lg outline-none text-center font-bold transition-colors ${inputClasses}`}
+                    />
+                  </Td>
+
+                  {/* 6. Finished Stock */}
+                  <Td>
+                    <span className="font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 shadow-sm whitespace-nowrap transition-all duration-300">
+                      {currentStock} {r.yieldUnit}
+                    </span>
+                  </Td>
+
+                  {/* 7. Actions */}
+                  <Td align="right">
+                    <div className="flex items-center justify-end gap-2">
+                      <div className={`${canMake ? 'visible' : 'invisible'}`}>
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          className="whitespace-nowrap px-3 bg-emerald-600 hover:bg-emerald-700 border-none shadow-md"
+                          onClick={() => handleDirectConfirm(r, quotaNum)}
+                        >
+                          <CheckCircle2 size={14} className="mr-1" /> Confirm
+                        </Button>
+                      </div>
+                      <button onClick={() => openEdit(r)} className="p-1.5 text-brand-400 hover:text-brand-700 transition-colors bg-brand-50 hover:bg-brand-100 rounded-md">
+                        <Edit2 size={15} />
+                      </button>
+                      <button onClick={() => setDeleteTarget(r)} className="p-1.5 text-red-400 hover:text-red-600 transition-colors bg-red-50 hover:bg-red-100 rounded-md">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </Td>
+                </Tr>
+              );
+            });
+          })()}
           {!recipes.length && (
             <Tr><Td className="text-center text-brand-300 py-8" colSpan={7}>Walang recipe pa. Mag-add para magsimulang mag-plan.</Td></Tr>
           )}
+          {recipes.length > 0 && search && !recipes.filter(r => r.product.toLowerCase().includes(search.toLowerCase())).length && (
+            <Tr><Td className="text-center text-brand-300 py-8" colSpan={7}>Walang nahanap na recipe.</Td></Tr>
+          )}
         </Table>
 
-        {/* ── PAGINATION CONTROLS ── */}
-        {recipes.length > PAGE_SIZE && (() => {
-          const totalPages = Math.ceil(recipes.length / PAGE_SIZE);
+        {/* ── PAGINATION ── */}
+        {recipes.filter(r => r.product.toLowerCase().includes(search.toLowerCase())).length > PAGE_SIZE && (() => {
+          const filteredRecipes = recipes.filter(r => r.product.toLowerCase().includes(search.toLowerCase()));
+          const totalPages = Math.ceil(filteredRecipes.length / PAGE_SIZE);
           const safePage = Math.min(currentPage, totalPages);
           return (
             <div className="flex items-center justify-between px-4 py-3 border-t border-brand-100">
               <p className="text-xs text-brand-400">
-                Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, recipes.length)} of {recipes.length} recipes
+                Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredRecipes.length)} of {filteredRecipes.length} recipes
               </p>
               <div className="flex items-center gap-1">
                 <button
@@ -347,7 +351,7 @@ export default function RecipeTab() {
         })()}
       </Card>
 
-      {/* MODALS */}
+      {/* ── MODALS ── */}
       <Modal
         isOpen={modalOpen} onClose={() => setModalOpen(false)}
         title={editRecipe ? 'Edit Recipe' : 'Add Recipe'}
@@ -368,32 +372,22 @@ export default function RecipeTab() {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            
-            <Select 
-              label="Product Name" 
-              required 
-              value={product} 
+            <Select
+              label="Product Name"
+              required
+              value={product}
               onChange={e => setProduct(e.target.value)}
             >
               <option value="" disabled>Select a product...</option>
               {products.map(p => {
                 const hasExistingRecipe = recipes.some(r => r.product.toLowerCase() === p.name.toLowerCase());
                 const isCurrentEdit = editRecipe && editRecipe.product.toLowerCase() === p.name.toLowerCase();
-                
-                // I-render lamang kung walang existing recipe o kaya'y ito mismo yung in-eedit
                 if (!hasExistingRecipe || isCurrentEdit) {
-                  return (
-                    <option key={p.id} value={p.name}>
-                      {p.name}
-                    </option>
-                  );
+                  return <option key={p.id} value={p.name}>{p.name}</option>;
                 }
-                
-                // Kapag may recipe na at hindi ito yung in-eedit, hindi na ipapakita sa dropdown
                 return null;
               })}
             </Select>
-
             <Input label="Est. Cost per Batch (₱)" type="number" value={cost} onChange={e => setCost(e.target.value)} placeholder="0.00" />
             <Input label="Actual Yield per Batch" required type="number" value={yld} onChange={e => setYld(e.target.value)} placeholder="e.g. 12" />
             <Input label="Yield Unit" value={yldUnit} onChange={e => setYldUnit(e.target.value)} placeholder="pcs, slices..." />

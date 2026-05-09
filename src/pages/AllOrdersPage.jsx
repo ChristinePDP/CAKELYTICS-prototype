@@ -199,8 +199,8 @@ function ScanResultModal({ order, isOpen, onClose, onStatusChange, onViewDetails
         {/* Order Info */}
         <div className="bg-[#fdf8f6] rounded-xl p-4 border-2 border-brand-100">
           <p className="text-[10px] font-black uppercase tracking-widest text-brand-600 mb-2">Order Details</p>
-          <h2 className="text-xl font-black text-brand-950 mb-2">#{order.id}</h2>
-          <p className="text-[14px] font-bold text-brand-900 mb-3">{order.customer?.name || 'Walk-in'}</p>
+          <p className="text-[10px] font-black text-brand-950 mb-2">#{order.id}</p>
+          <p className="text-[15px] font-bold text-brand-900 mb-3">{order.customer?.name || 'Walk-in'}</p>
           
           <div className="bg-white rounded-lg p-3 max-h-[120px] overflow-y-auto">
             <table className="w-full text-xs">
@@ -389,22 +389,23 @@ export default function AllOrdersPage() {
             onChange={v => { setStatusFilter(v); setPage(1); }}
           />
         </div>
-        
-        <div className="flex items-center gap-3">
-          <Button 
+        <Button 
             variant="primary" 
             className="bg-brand-900 text-white font-bold shadow-md flex items-center gap-2"
             onClick={() => { setScannerOpen(true); setManualOrderId(''); }}
           >
             <QrCode size={18} /> Scan Receipt QR
           </Button>
-          <Button 
+        
+        <div className="flex items-center gap-3">
+          
+          {/* <Button 
             variant="secondary" 
             className="border-2 border-blue-300 bg-blue-50 text-blue-900 font-bold hover:bg-blue-100 flex items-center gap-2"
             onClick={() => navigate('/admin/mobile-scanner')}
           >
             <Smartphone size={18} /> Mobile Scanner
-          </Button>
+          </Button> */}
         </div>
       </div>
 

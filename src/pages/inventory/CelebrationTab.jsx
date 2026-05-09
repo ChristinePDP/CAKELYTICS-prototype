@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useToast, Button, Modal, Input, Select, Table, Tr, Td, Pagination, Badge, Card, LevelBar, ConfirmModal } from '../../components/ui';
 import { ingStatus } from '../../utils/inventoryHelpers';
@@ -10,11 +10,15 @@ export default function CelebrationTab() {
   const { materials = [], addMaterial, updateMaterial, deleteMaterial } = useApp();
   const { show: showToast } = useToast();
   const [page, setPage]             = useState(1);
+  const [search, setSearch]         = useState('');
   const [modalOpen, setModalOpen]   = useState(false);
   const [editMat, setEditMat]       = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  const paged = materials.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const filtered = materials.filter(m =>
+    m.name.toLowerCase().includes(search.toLowerCase())
+  );
+  const paged = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const handleSave = (data, addedQty = 0, note = '') => {
     if (editMat?.id) {
@@ -44,6 +48,20 @@ export default function CelebrationTab() {
             <Plus size={14} /> Add New Material
           </Button>
         </div>
+
+        {/* Search */}
+        <div className="px-4 py-3 border-b border-brand-100 bg-brand-50/40">
+          <div className="relative max-w-xs">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-300" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Search material..."
+              className="w-full pl-8 pr-3 py-1.5 text-sm border border-brand-200 rounded-lg outline-none focus:border-brand-400 bg-white"
+            />
+          </div>
+        </div>
         <Table columns={[
           { label: 'Item Name' },
           { label: 'Current Stock' },
@@ -69,11 +87,13 @@ export default function CelebrationTab() {
             );
           })}
           {!paged.length && (
-            <Tr><Td colSpan={5} className="text-center py-8 text-brand-400">Walang naka-record na celebration materials.</Td></Tr>
+            <Tr><Td colSpan={5} className="text-center py-8 text-brand-400">
+              {search ? 'Walang nahanap na material.' : 'Walang naka-record na celebration materials.'}
+            </Td></Tr>
           )}
         </Table>
-        {materials.length > PER_PAGE && (
-           <Pagination page={page} count={materials.length} perPage={PER_PAGE} total="materials" onChange={setPage} />
+        {filtered.length > PER_PAGE && (
+           <Pagination page={page} count={filtered.length} perPage={PER_PAGE} total="materials" onChange={setPage} />
         )}
       </Card>
 

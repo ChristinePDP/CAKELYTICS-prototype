@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Trash2, AlertTriangle, DollarSign, Calendar, Filter, Archive } from 'lucide-react';
+import { Trash2, AlertTriangle, Search, Filter, Archive } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useToast, Button, Modal, Input, Select, Textarea, Table, Tr, Td, Pagination, Badge, Card, ConfirmModal } from '../../components/ui';
 
@@ -31,6 +31,7 @@ export default function WasteTab() {
   const [productUnit, setProductUnit] = useState('pcs');
 
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [search, setSearch]     = useState('');
   const [filterType, setFilterType] = useState('All');
   const [filterDate, setFilterDate] = useState('All');
 
@@ -50,6 +51,7 @@ export default function WasteTab() {
 
   const filteredLogs = useMemo(() => {
     return wasteLogs.filter(log => {
+      if (search && !log.item.toLowerCase().includes(search.toLowerCase())) return false;
       if (filterType !== 'All' && log.type !== filterType.toLowerCase()) return false;
       if (filterDate === 'Today') {
         const today = new Date().toISOString().split('T')[0];
@@ -63,7 +65,7 @@ export default function WasteTab() {
       }
       return true;
     });
-  }, [wasteLogs, filterType, filterDate]);
+  }, [wasteLogs, search, filterType, filterDate]);
 
   const totalWasteCost = filteredLogs.reduce((sum, log) => sum + (log.cost || 0), 0);
   const paged = filteredLogs.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -129,6 +131,7 @@ export default function WasteTab() {
         </Card>
       </div>
 
+      {/* ─── WASTE LOG TAB ─── */}
       <Card>
         <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between p-4 border-b border-brand-100 gap-4">
           <div>
@@ -149,7 +152,18 @@ export default function WasteTab() {
         </div>
 
         {/* ─── FILTERS ─── */}
-        <div className="bg-brand-50/50 p-3 px-4 flex items-center gap-4 border-b border-brand-100">
+        <div className="bg-brand-50/50 p-3 px-4 flex flex-wrap items-center gap-3 border-b border-brand-100">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[160px] max-w-xs">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-300" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Search item..."
+              className="w-full pl-8 pr-3 py-1.5 text-sm border border-brand-200 rounded-lg outline-none focus:border-brand-400 bg-white"
+            />
+          </div>
           <div className="flex items-center gap-2">
             <Filter size={14} className="text-brand-400" />
             <select className="text-xs font-semibold bg-white border border-brand-200 rounded-md px-2 py-1 outline-none" value={filterType} onChange={(e) => { setFilterType(e.target.value); setPage(1); }}>

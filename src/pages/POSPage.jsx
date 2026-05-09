@@ -76,7 +76,7 @@ function ProductCard({ product, onClick }) {
           {!outOfStock && (
             <button 
               onClick={(e) => { e.stopPropagation(); onClick(product); }}
-              className="flex items-center gap-1 bg-brand-100 text-brand-700 hover:bg-[#5c4033] hover:text-white px-2 py-1 rounded-md text-[10px] font-bold transition-colors"
+              className="flex items-center gap-1 bg-[#5c4033] text-white px-2 py-1 rounded-md text-[10px] font-bold transition-colors"
             >
               <Plus size={12} /> ADD
             </button>

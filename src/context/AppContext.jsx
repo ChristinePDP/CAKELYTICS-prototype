@@ -29,7 +29,8 @@ export function AppProvider({ children }) {
   // ── State ──────────────────────────────────────────────────────
   const [products,    setProducts]    = useState(INIT_PRODUCTS);
   const [orders,      setOrders]      = useState(INIT_ORDERS);
-  const [wasteLogs,   setWasteLogs]   = useState(INIT_WASTE_LOGS);
+  const [wasteLogs,       setWasteLogs]       = useState(INIT_WASTE_LOGS);
+  const [productionLogs,  setProductionLogs]  = useState([]);
   const [recipes,     setRecipes]     = useState(INIT_RECIPES);
   
   // BAGONG STATE: Para sa Celebration Materials (binabasa na ang nasa dummyData)
@@ -179,6 +180,16 @@ export function AppProvider({ children }) {
         ? { ...p, stock: p.stock + produced }
         : p
     ));
+
+    // I-save ang production log entry para makita sa Waste Log > Production Log tab
+    setProductionLogs(prev => [{
+      id: `pl${Date.now()}`,
+      dt,
+      product: recipe.product,
+      produced,
+      yieldUnit: recipe.yieldUnit || 'pcs',
+      recipeId,
+    }, ...prev]);
   }, [recipes]);
 
   // ── Waste Logs ─────────────────────────────────────────────────
@@ -215,7 +226,7 @@ export function AppProvider({ children }) {
 
   const value = {
     // ── Data
-    products, orders, ingredients, materials, recipes, wasteLogs,
+    products, orders, ingredients, materials, recipes, wasteLogs, productionLogs,
     // ── Status
     loading, error,
     // ── Product actions

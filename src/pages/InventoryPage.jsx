@@ -5,6 +5,7 @@ import RawTab from './inventory/RawTab';
 import CelebrationTab from './inventory/CelebrationTab';
 import RecipeTab from './inventory/RecipeTab';
 import WasteTab from './inventory/WasteTab';
+import ProductLogTab from './inventory/ProductLogTab';
 
 const MAIN_TABS = [
   { key: 'stocks', label: 'Stocks' },
@@ -12,9 +13,10 @@ const MAIN_TABS = [
 ];
 
 const STOCK_SUBTABS = [
-  { key: 'raw',    label: 'Raw Ingredients' },
+  { key: 'raw',     label: 'Raw Ingredients' },
   { key: 'celeb',  label: 'Celebration Materials' },
   { key: 'recipe', label: 'Recipe Log' },
+  { key: 'product', label: 'Product Log' },
 ];
 
 export default function InventoryPage() {
@@ -22,7 +24,7 @@ export default function InventoryPage() {
   const [subTab, setSubTab]   = useState('raw');
 
   // Kukunin natin ang data mula sa AppContext para sa dynamic KPI
-  const { ingredients = [], materials = [], recipes = [] } = useApp();
+  const { ingredients = [], materials = [], recipes = [], productionLogs = [] } = useApp();
 
   // Dynamic KPI logic base sa kung anong sub-tab ang naka-active
   const kpiData = useMemo(() => {
@@ -43,13 +45,20 @@ export default function InventoryPage() {
       ];
     }
     if (subTab === 'recipe') {
-      // Tinanggal na natin ang Active Goals, ginawang isa na lang
       return [
         { label: 'Total Registered Recipes', val: recipes.length, color: '' }
       ];
     }
+    if (subTab === 'product') {
+      const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const todayCount = productionLogs.filter(pl => pl.dt?.includes(todayStr.split(',')[0]) && pl.dt?.includes(todayStr.split(', ')[1])).length;
+      return [
+        { label: 'Total Production Entries', val: productionLogs.length, color: '' },
+        { label: 'Produced Today', val: todayCount, color: '' },
+      ];
+    }
     return [];
-  }, [mainTab, subTab, ingredients, materials, recipes]);
+  }, [mainTab, subTab, ingredients, materials, recipes, productionLogs]);
 
   return (
     <div className="space-y-6">
@@ -110,9 +119,10 @@ export default function InventoryPage() {
 
           {/* 4. CONTENT TABLES */}
           <div className="pt-2">
-            {subTab === 'raw'    && <RawTab />}
-            {subTab === 'celeb'  && <CelebrationTab />}
-            {subTab === 'recipe' && <RecipeTab />}
+            {subTab === 'raw'     && <RawTab />}
+            {subTab === 'celeb'   && <CelebrationTab />}
+            {subTab === 'recipe'  && <RecipeTab />}
+            {subTab === 'product' && <ProductLogTab />}
           </div>
         </div>
       )}
