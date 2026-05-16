@@ -500,7 +500,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
                 <BrainCircuit size={22} />
               </div>
               <div>
-                <h2 className="text-xl font-black text-brand-900 tracking-tight">AI Business Insights & Forecast</h2>
+                <h2 className="text-xl font-black text-brand-900 tracking-tight">AI Business Insights</h2>
                 
               </div>
             </div>

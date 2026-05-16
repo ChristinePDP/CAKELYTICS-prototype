@@ -365,7 +365,7 @@ export default function CustomerMenu({ cart, setCart }) {
         </div>
 
         {/* ── Sidebar Cart ── */}
-        <div className="bg-white p-8 rounded-3xl border border-[#EAE4E0] h-fit sticky top-[160px] flex flex-col max-h-[calc(100vh-180px)]">
+        <div className="bg-white p-8 rounded-3xl border border-[#EAE4E0] h-fit sticky top-[200px] flex flex-col max-h-[calc(100vh-180px)]">
           <h3 className="text-xl font-black text-[#4A3B36] mb-6 shrink-0">Your Cart</h3>
           
           {cart.length === 0 ? (
